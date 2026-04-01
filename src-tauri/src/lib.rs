@@ -1,6 +1,10 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use std::sync::Mutex;
-use tauri::{Emitter, Manager};
+use tauri::{
+    menu::{MenuBuilder, MenuItemBuilder},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Emitter, Manager,
+};
 
 // Global state to store the opened file path
 struct OpenedFilePath(Mutex<Option<String>>);
@@ -41,6 +45,18 @@ fn close_devtools(app: tauri::AppHandle) {
 }
 
 mod commands;
+mod error;
+mod state;
+mod manifest;
+mod downloader;
+mod checksum;
+mod archive;
+mod installer;
+mod process_manager;
+mod port_checker;
+mod healthcheck;
+mod diagnostics;
+mod logs;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -49,10 +65,12 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
+        .manage(process_manager::ServiceManager::new())
         .setup(|app| {
             // Capture CLI arguments to check if a file was opened
             let args: Vec<String> = std::env::args().collect();
@@ -84,11 +102,62 @@ pub fn run() {
             let window = app
                 .get_webview_window("main")
                 .expect("Failed to get main window");
+            let main_window = window.clone();
             window.on_window_event(
                 move |event| {
-                    if let tauri::WindowEvent::CloseRequested { .. } = event {}
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = main_window.hide();
+                    }
                 },
             );
+
+            let show_item = MenuItemBuilder::with_id("show", "Show MewAMP").build(app)?;
+            let quit_item = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
+            let tray_menu = MenuBuilder::new(app)
+                .items(&[&show_item, &quit_item])
+                .build()?;
+
+            let app_handle = app.handle().clone();
+            TrayIconBuilder::with_id("mewamp-tray")
+                .icon(
+                    app.default_window_icon()
+                        .cloned()
+                        .expect("missing default window icon"),
+                )
+                .menu(&tray_menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(move |_, event| match event.id.as_ref() {
+                    "show" => {
+                        if let Some(main) = app_handle.get_webview_window("main") {
+                            let _ = main.show();
+                            let _ = main.set_focus();
+                        }
+                    }
+                    "quit" => {
+                        app_handle.exit(0);
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(move |tray: &tauri::tray::TrayIcon, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        if let Some(main) = tray.app_handle().get_webview_window("main") {
+                            let visible = main.is_visible().unwrap_or(false);
+                            if visible {
+                                let _ = main.hide();
+                            } else {
+                                let _ = main.show();
+                                let _ = main.set_focus();
+                            }
+                        }
+                    }
+                })
+                .build(app)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -110,6 +179,23 @@ pub fn run() {
             commands::git::switch_branch,
             commands::git::get_git_status,
             commands::git::git_pull,
+            commands::installer::start_install,
+            commands::installer::get_install_state,
+            commands::installer::reset_install_state,
+            commands::services::start_service,
+            commands::services::start_managed_service,
+            commands::services::stop_service,
+            commands::services::get_service_status,
+            commands::port_checker::check_ports,
+            commands::diagnostics::get_diagnostics,
+            commands::diagnostics::export_diagnostics,
+            commands::logs::get_log,
+            commands::logs::clear_log_file,
+            commands::settings::get_app_settings,
+            commands::settings::get_htdocs_path,
+            commands::settings::open_folder,
+            commands::settings::update_ports,
+            commands::settings::update_paths,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

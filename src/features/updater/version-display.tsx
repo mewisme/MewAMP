@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import appIcon from "@/assets/app-icon.png";
 
 enum UpdateStatus {
   CHECKING = "CHECKING",
@@ -162,13 +163,13 @@ export function VersionDisplay({ className }: { className?: string }) {
       <Dialog open={showUpdateDialog} onOpenChange={setShowUpdateDialog}>
         <DialogContent className="w-[280px] rounded-xl bg-background backdrop-blur-sm [&>button]:cursor-pointer [&>button]:text-foreground [&>button:hover]:text-foreground/80">
           <div className="flex flex-col items-center gap-4 py-4">
-            <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-blue-600">
-              <img src="/tauri.svg" alt="App" className="h-12 w-12 object-contain" />
+            <div className="flex h-20 w-20 items-center justify-center rounded-xl">
+              <img src={appIcon} alt="App" className="h-20 w-20 object-contain" />
             </div>
 
             <div className="w-full space-y-3">
               <div className="space-y-0.5 text-center">
-                <h2 className="text-xl font-semibold text-foreground">Tauri template</h2>
+                <h2 className="text-xl font-semibold text-foreground">MewAMP</h2>
                 <p className="text-xs text-gray-400">Version {version}</p>
               </div>
 

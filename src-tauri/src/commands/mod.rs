@@ -1,3 +1,9 @@
 pub mod files;
 pub mod git;
+pub mod installer;
+pub mod port_checker;
+pub mod diagnostics;
+pub mod logs;
+pub mod services;
+pub mod settings;
 pub mod splash;

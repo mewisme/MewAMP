@@ -9,6 +9,11 @@ import Home from './pages/home';
 import { Layout } from './components/layout';
 import Empty from './pages/empty';
 import { Titlebar } from './features/titlebar';
+import SetupPage from './pages/setup';
+import DashboardPage from './pages/dashboard';
+import LogsPage from './pages/logs';
+import SettingsPage from './pages/settings';
+import DiagnosticsPage from './pages/diagnostics';
 
 
 function App() {
@@ -41,9 +46,14 @@ function App() {
         <Titlebar />
         <BrowserRouter>
           <Layout>
-            <Toaster position="bottom-right" richColors />
+            <Toaster position="bottom-center" richColors offset={50} />
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/setup" element={<SetupPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/logs" element={<LogsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/diagnostics" element={<DiagnosticsPage />} />
               <Route path="/empty" element={<Empty />} />
             </Routes>
           </Layout>

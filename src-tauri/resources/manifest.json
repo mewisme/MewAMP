@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "manifestVersion": "2026.04.01",
+  "channel": "stable",
+  "minAppVersion": "0.1.0",
+  "packages": {
+    "windows-x64": {
+      "apache": {
+        "version": "2.4.66",
+        "packageType": "zip",
+        "primaryUrl": "https://www.apachelounge.com/download/VS17/binaries/httpd-2.4.66-251206-Win64-VS17.zip",
+        "fallbackUrls": [],
+        "sha256": "2CD1F349B6705E43E784E876A233EEB1A859FA6B8ABC693A91F87B35A368F7F9",
+        "installNotes": "Apache Lounge VS17 build for Windows x64"
+      },
+      "php": {
+        "version": "8.3.30",
+        "packageType": "zip",
+        "primaryUrl": "https://downloads.php.net/~windows/releases/archives/php-8.3.30-nts-Win32-vs16-x64.zip",
+        "fallbackUrls": [],
+        "sha256": "42637b42b38b9c0d731e59c5cb8b755693a01b110cd2f31951f67de5cb4cd129",
+        "installNotes": "NTS x64 build compatible with Apache FastCGI"
+      },
+      "mariadb": {
+        "version": "11.4.5",
+        "packageType": "zip",
+        "primaryUrl": "https://archive.mariadb.org/mariadb-11.4.5/winx64-packages/mariadb-11.4.5-winx64.zip",
+        "fallbackUrls": [],
+        "sha256": "b7c11d38657f16b837e68199d73670510aadb78f42dfa5d5fdea31a7aab342e3",
+        "installNotes": "MariaDB 11.4 LTS ZIP for Windows x64"
+      },
+      "phpmyadmin": {
+        "version": "5.2.1",
+        "packageType": "zip",
+        "primaryUrl": "https://files.phpmyadmin.net/phpMyAdmin/5.2.1/phpMyAdmin-5.2.1-all-languages.zip",
+        "fallbackUrls": [],
+        "sha256": "31c95fe5c00e0f899b5d31ac6fff506cf8061f2f746e9d7084c395f47451946e",
+        "installNotes": "phpMyAdmin all-languages package"
+      }
+    }
+  }
+}

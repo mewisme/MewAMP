@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Tauri template",
+  "productName": "MewAMP",
   "version": "0.1.0",
-  "identifier": "com.tauri-template.app",
+  "identifier": "com.mewisme.mewamp",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -15,13 +15,17 @@
     "windows": [
       {
         "label": "main",
-        "title": "Tauri template",
-        "width": 800,
+        "title": "MewAMP",
+        "width": 1000,
         "height": 700,
+        "minWidth": 1000,
+        "minHeight": 700,
+        "maximizable": true,
         "devtools": true,
         "decorations": false,
         "transparent": true,
         "shadow": true,
+        "center": true,
         "visible": false
       },
       {
@@ -48,33 +52,16 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": [],
-    "createUpdaterArtifacts": true,
-    "fileAssociations": [
-      {
-        "ext": [
-          "ts",
-          "js",
-          "jsx",
-          "tsx",
-          "json",
-          "md",
-          "txt",
-          "yaml",
-          "yml",
-          "toml"
-        ],
-        "name": "Tauri Template",
-        "description": "Tauri template file",
-        "mimeType": "text/plain"
-      }
-    ]
+    "resources": [
+      "resources/manifest.json"
+    ],
+    "createUpdaterArtifacts": true
   },
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM4NjIzRDY4RkZGNDZFRQpSV1R1UnYrUDFpT0dBNWpIMXpEaEswbUVkMkY4aW9nendCR1hQYktnNHBaK0tlaXk1QzN1dkpZMwo=",
       "endpoints": [
-        "https://github.com/mewisme/tauri-template/releases/latest/download/latest.json"
+        "https://github.com/mewisme/MewAMP/releases/latest/download/latest.json"
       ]
     }
   }

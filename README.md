@@ -1,110 +1,148 @@
-# Tauri Desktop App Template
+# MewAMP
 
-Template for building cross-platform desktop applications with Tauri, React, and TypeScript.
+MewAMP is a desktop application built with Tauri + React for managing local development services with a modern dashboard, guided setup flow, diagnostics, and log tooling.
 
-## Overview
+## Features
 
-This template is prepared for real-world development and includes:
+- Cross-platform desktop runtime with Tauri v2
+- Dashboard and setup pages for installer and service workflows
+- Service control and status monitoring via Rust commands
+- Port checks and diagnostics export
+- Log viewing and cleanup utilities
+- Settings management for ports and local paths
+- Built-in file system and Git helper commands
 
-- Tauri for native desktop runtime on macOS, Windows, and Linux
-- React + TypeScript for frontend development
-- shadcn/ui + Tailwind CSS for UI
-- Jotai for global state management
-- React Router for client-side routing
-- Built-in Tauri commands for file system and Git operations
+## Tech Stack
+
+- Frontend: React 19, TypeScript, Vite 6
+- UI: Tailwind CSS v4, shadcn/ui, Lucide icons
+- State: Jotai
+- Routing: React Router v7
+- Desktop runtime: Tauri v2
+- Backend language: Rust
 
 ## Prerequisites
 
-Install the following tools before running the project:
+Install these tools before running the app:
 
 - [Node.js](https://nodejs.org/) (LTS recommended)
 - [pnpm](https://pnpm.io/)
 - [Rust](https://www.rust-lang.org/)
-- Tauri system dependencies (see [Tauri prerequisites](https://tauri.app/start/prerequisites/))
+- System requirements for Tauri (see [Tauri prerequisites](https://tauri.app/start/prerequisites/))
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/mewisme/tauri-template
-cd tauri-template
+git clone https://github.com/mewisme/MewAMP
+cd MewAMP
 pnpm install
 pnpm app-dev
 ```
 
-## Available Scripts
+## Scripts
 
-- `pnpm dev`: Run Vite dev server (web only)
-- `pnpm build`: Type-check and build frontend (`tsc && vite build`)
-- `pnpm preview`: Preview built frontend
-- `pnpm app-dev`: Run the full Tauri desktop app in development
-- `pnpm app-build`: Build production desktop binaries
-- `pnpm tauri`: Run Tauri CLI commands
-- `pnpm icon`: Generate app icons from `app-icon.png`
-- `pnpm app-upver`: Generate changelog and bump app version
-- `pnpm app-sign`: Generate signing key pair
-- `pnpm rename "<App Name>"`: Rename app in key config files
+- `pnpm dev` - Run Vite dev server (web only)
+- `pnpm build` - Type-check and build frontend (`tsc && vite build`)
+- `pnpm preview` - Preview the production web build
+- `pnpm app-dev` - Run the Tauri desktop app in development
+- `pnpm app-build` - Build production desktop binaries
+- `pnpm tauri` - Run raw Tauri CLI commands
+- `pnpm icon` - Generate app icons from `app-icon.png`
+- `pnpm app-upver` - Generate changelog and bump app version
+- `pnpm app-sign` - Generate updater signing key pair
+- `pnpm rename` - Rename app metadata across key config files
 
 ## Rename App
 
-Use:
-
 ```bash
-pnpm rename "My Awesome App"
+pnpm rename "MewAMP"
 ```
 
-The script updates:
+The rename script updates:
 
-- `package.json` (`name`, kebab-case)
+- `package.json` (`name`)
 - `src-tauri/Cargo.toml` (`name`, `description`)
-- `src-tauri/tauri.conf.json` (`productName`, `identifier`, window `title`)
-
-Example result:
-
-- package name: `my-awesome-app`
-- product name: `My Awesome App`
-- identifier: `com.my-awesome-app.app`
+- `src-tauri/tauri.conf.json` (`productName`, `identifier`, window title)
 
 ## Project Structure
 
 ```text
-template-tauri/
+MewAMP/
 ├── src/                          # React frontend
 │   ├── components/               # Shared UI components
-│   ├── features/                 # Feature modules
+│   ├── features/                 # Feature modules (dashboard, setup, logs, etc.)
 │   ├── pages/                    # Route pages
 │   ├── stores/                   # Jotai stores
 │   ├── hooks/                    # Custom hooks
-│   └── lib/                      # Utilities
+│   └── lib/                      # Frontend utilities and command wrappers
 ├── src-tauri/                    # Rust + Tauri backend
-│   ├── src/commands/             # Tauri commands
-│   │   ├── files.rs              # File system commands
-│   │   └── git.rs                # Git commands
+│   ├── src/commands/             # Tauri command modules
+│   ├── src/installer/            # Installer flow internals
+│   ├── src/process_manager/      # Managed process state/control
+│   ├── src/diagnostics/          # Diagnostics collection/export logic
+│   ├── src/logs/                 # Log operations
+│   ├── src/manifest/             # Manifest and metadata handling
 │   ├── Cargo.toml
 │   └── tauri.conf.json
 ├── public/                       # Static assets
-├── components.json               # shadcn/ui config
-└── vite.config.ts
+├── scripts/                      # Project maintenance scripts
+└── package.json
 ```
 
-## Built-in Tauri Commands
+## Tauri Commands (Current)
 
-### File System (`src-tauri/src/commands/files.rs`)
+### Utility
 
-- `list_dir(path: string)`
-- `read_file_content(path: string)`
-- `write_file_content(path: string, content: string)`
-- `create_directory(path: string)`
-- `create_file(path: string)`
-- `delete_node(path: string)`
-- `rename_node(old_path: string, new_path: string)`
+- `greet`
+- `get_opened_file_path`
+- `toggle_devtools`
+- `open_devtools`
+- `close_devtools`
+- `splash_close`
 
-### Git (`src-tauri/src/commands/git.rs`)
+### File System
 
-- `get_current_branch(working_dir: string)`
-- `get_all_branches(working_dir: string)`
-- `switch_branch(working_dir: string, branch: string)`
-- `get_git_status(working_dir: string)`
-- `git_pull(working_dir: string)`
+- `list_dir`
+- `read_file_content`
+- `write_file_content`
+- `create_directory`
+- `create_file`
+- `delete_node`
+- `rename_node`
+
+### Git
+
+- `get_current_branch`
+- `get_all_branches`
+- `switch_branch`
+- `get_git_status`
+- `git_pull`
+
+### Setup / Installer
+
+- `start_install`
+- `get_install_state`
+- `reset_install_state`
+
+### Services / Runtime
+
+- `start_service`
+- `start_managed_service`
+- `stop_service`
+- `get_service_status`
+- `check_ports`
+
+### Diagnostics / Logs / Settings
+
+- `get_diagnostics`
+- `export_diagnostics`
+- `get_log`
+- `clear_log_file`
+- `get_app_settings`
+- `get_htdocs_path`
+- `open_folder`
+- `update_ports`
+- `update_paths`
 
 ## Build for Production
 
@@ -113,16 +151,8 @@ pnpm build
 pnpm app-build
 ```
 
-Output binaries are generated in `src-tauri/target/release`.
-
-## Tech Stack
-
-- Frontend: React, TypeScript, Vite, Tailwind CSS, shadcn/ui
-- State: Jotai
-- Routing: React Router
-- Desktop runtime: Tauri
-- Backend language: Rust
+Desktop build artifacts are generated under `src-tauri/target/release`.
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE).
+MIT License. See [LICENSE](LICENSE).

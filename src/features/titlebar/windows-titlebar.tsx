@@ -7,8 +7,8 @@ export function WindowsTitlebar() {
     <TitlebarContainer>
       {/* Title - Centered */}
       <div data-tauri-drag-region className="flex items-center justify-center h-full px-3">
-        <img src={appIcon} alt="Tauri Template" className="w-4 h-4 mr-2" />
-        <span className="text-[13px] font-medium text-foreground/70 pointer-events-none">Tauri Template</span>
+        <img src={appIcon} alt="MewAMP" className="w-4 h-4 mr-2" />
+        <span className="text-[13px] font-medium text-foreground/70 pointer-events-none">MewAMP</span>
       </div>
 
       {/* Buttons - Absolute Right */}
