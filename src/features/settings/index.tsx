@@ -33,7 +33,6 @@ type Settings = {
 };
 
 type PortStatus = "idle" | "checking" | "available" | "in_use";
-type ThemeMode = "light" | "dark" | "system";
 
 export function SettingsPanel() {
   const [settings, setSettings] = useState<Settings | null>(null);
