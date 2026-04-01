@@ -84,12 +84,14 @@ function getNewCommits() {
       // Get commits since last processed commit, excluding the last processed commit itself
       return execSync(`git log ${lastProcessedCommit}..HEAD --not ${lastProcessedCommit} --pretty=format:"%s"`, { encoding: 'utf8' })
         .split('\n')
-        .filter(Boolean);
+        .filter(Boolean)
+        .reverse();
     } else {
       // If no last processed commit, get all commits
       return execSync('git log --pretty=format:"%s"', { encoding: 'utf8' })
         .split('\n')
-        .filter(Boolean);
+        .filter(Boolean)
+        .reverse();
     }
   } catch (error) {
     console.error('Error getting git commits:', error.message);
