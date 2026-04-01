@@ -20,21 +20,45 @@ function App() {
   const [bootReady, setBootReady] = useState(false);
 
   useEffect(() => {
+    setBootReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!bootReady) {
+      return;
+    }
+
     let cancelled = false;
-    (async () => {
+
+    const closeSplashAfterLoad = async () => {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
+
       if (cancelled) {
         return;
       }
-      setBootReady(true);
+
       await invoke("splash_close");
-    })().catch((error) => {
-      console.error(error);
-    });
+    };
+
+    const runCloseSplash = () => {
+      closeSplashAfterLoad().catch((error) => {
+        console.error(error);
+      });
+    };
+
+    if (document.readyState === "complete") {
+      runCloseSplash();
+    } else {
+      window.addEventListener("load", runCloseSplash, { once: true });
+    }
 
     return () => {
       cancelled = true;
+      window.removeEventListener("load", runCloseSplash);
     };
-  }, []);
+  }, [bootReady]);
 
   if (!bootReady) {
     return null;
