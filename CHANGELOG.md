@@ -2,8 +2,8 @@
 
 🔨 Other Changes
 
-- Remove unused ThemeMode type from settings index ([d8cf227](../../commit/d8cf227))
-- Update version to 0.1.0 and clean up changelog and version files ([0314ba9](../../commit/0314ba9))
+- Improve splash screen handling and update title to MewAMP ([4f6467c](../../commit/4f6467c))
+- Bump version to 0.1.1 and update changelog ([ead04b3](../../commit/ead04b3))
 
 
-📋 Full Changelog: [0314ba9...d8cf227](../../compare/0314ba9...d8cf227)
+📋 Full Changelog: [ead04b3...4f6467c](../../compare/ead04b3...4f6467c)
