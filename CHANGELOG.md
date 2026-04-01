@@ -2,8 +2,8 @@
 
 🔨 Other Changes
 
-- Improve splash screen handling and update title to MewAMP ([4f6467c](../../commit/4f6467c))
-- Bump version to 0.1.1 and update changelog ([ead04b3](../../commit/ead04b3))
+- Add support for Windows process creation flags ([b66f50e](../../commit/b66f50e))
+- Bump version to 0.1.2 and update changelog ([d5652bf](../../commit/d5652bf))
 
 
-📋 Full Changelog: [ead04b3...4f6467c](../../compare/ead04b3...4f6467c)
+📋 Full Changelog: [d5652bf...b66f50e](../../compare/d5652bf...b66f50e)
