@@ -1,10 +1,15 @@
 use std::{collections::HashMap, env, path::Path, process::Stdio, sync::Mutex};
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, Command};
 use tokio::time::{sleep, Duration};
 
 use crate::{error::MewAmpError, logs::append_log};
+
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 pub struct ServiceManager {
     children: Mutex<HashMap<String, Child>>,
@@ -41,6 +46,8 @@ impl ServiceManager {
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
+        #[cfg(target_os = "windows")]
+        cmd.creation_flags(CREATE_NO_WINDOW);
 
         let mut child = cmd
             .spawn()
