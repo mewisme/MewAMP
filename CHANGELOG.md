@@ -1,10 +1,16 @@
 ## What's Changed
 
+✨ Features
+
+- Enhance metadata and UI components for MewAMP ([0ae8d22](../../commit/0ae8d22))
+
+♻️ Refactoring
+
+- Update Toaster position and simplify DiagnosticsJsonView layout ([2a0265c](../../commit/2a0265c))
+
 🔨 Other Changes
 
-- Standardize SQL LocalDB version to 2025 across configurations ([9d2704b](../../commit/9d2704b))
-- Update SQL LocalDB version to 2025 and adjust related configurations ([aa2bc93](../../commit/aa2bc93))
-- Bump version to 0.5.4 and update changelog ([faedfd7](../../commit/faedfd7))
+- Bump version to 0.5.6 and update changelog ([0556c7b](../../commit/0556c7b))
 
 
-📋 Full Changelog: [faedfd7...9d2704b](../../compare/faedfd7...9d2704b)
+📋 Full Changelog: [0556c7b...2a0265c](../../compare/0556c7b...2a0265c)
