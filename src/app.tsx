@@ -10,8 +10,6 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Titlebar } from '@/features/titlebar';
 import { SqlLocaldbGlobalSync } from '@/features/sql-localdb/SqlLocaldbGlobalSync';
 
-const Home = lazy(() => import('./pages/home'));
-const Empty = lazy(() => import('./pages/empty'));
 const SetupPage = lazy(() => import('./pages/setup'));
 const DashboardPage = lazy(() => import('./pages/dashboard'));
 const LogsPage = lazy(() => import('./pages/logs'));
@@ -83,13 +81,12 @@ function App() {
               }
             >
               <Routes>
-                <Route path="/" element={<Home />} />
+                <Route path="/" element={<DashboardPage />} />
                 <Route path="/setup" element={<SetupPage />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/logs" element={<LogsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/diagnostics" element={<DiagnosticsPage />} />
-                <Route path="/empty" element={<Empty />} />
               </Routes>
             </Suspense>
           </Layout>
