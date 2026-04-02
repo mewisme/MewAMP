@@ -12,6 +12,9 @@ pub struct PackageDefinition {
     pub sha256: String,
     #[serde(default)]
     pub install_notes: Option<String>,
+    /// Windows Installer ProductCode (braced GUID). **Required** for SqlLocalDB MSI packages — used for `msiexec /x` uninstall (not the `.msi` path).
+    #[serde(default)]
+    pub product_code: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,22 +48,30 @@ impl PlatformPackages {
         ]
         .into_iter()
         .filter_map(|(key, pkg)| {
-            pkg.map(|p| SqlLocalDbManifestPackage {
-                manifest_key: key.to_string(),
-                version: p.version.clone(),
-                sha256: p.sha256.clone(),
-                primary_url: p.primary_url.clone(),
-                install_notes: p.install_notes.clone(),
+            pkg.map(|p| {
+                let release_year = key
+                    .strip_prefix("sqllocaldb")
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or(key)
+                    .to_string();
+                SqlLocalDbManifestPackage {
+                    manifest_key: key.to_string(),
+                    release_year,
+                    version: p.version.clone(),
+                    sha256: p.sha256.clone(),
+                    primary_url: p.primary_url.clone(),
+                    install_notes: p.install_notes.clone(),
+                    product_code: p.product_code.clone(),
+                }
             })
         })
         .collect();
         entries.sort_by(|a, b| {
-            // Numeric year compare when both are digits; fallback to string.
-            let av = a.version.parse::<u32>().ok();
-            let bv = b.version.parse::<u32>().ok();
+            let av = a.release_year.parse::<u32>().ok();
+            let bv = b.release_year.parse::<u32>().ok();
             match (av, bv) {
                 (Some(x), Some(y)) => y.cmp(&x),
-                _ => b.version.cmp(&a.version),
+                _ => b.release_year.cmp(&a.release_year),
             }
         });
         entries
@@ -72,10 +83,14 @@ impl PlatformPackages {
 #[serde(rename_all = "camelCase")]
 pub struct SqlLocalDbManifestPackage {
     pub manifest_key: String,
+    /// Release year from manifest key (`sqllocaldb2022` → `2022`); matches `sqllocaldb_version` in install config.
+    pub release_year: String,
+    /// Windows Installer product version from the manifest `version` field.
     pub version: String,
     pub sha256: String,
     pub primary_url: String,
     pub install_notes: Option<String>,
+    pub product_code: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

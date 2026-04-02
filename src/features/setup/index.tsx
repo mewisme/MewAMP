@@ -106,10 +106,10 @@ export function SetupWizard() {
         }
         setSqlLocaldbEntries(entries);
         setConfig((c) => {
-          const versions = new Set(entries.map((e) => e.version));
-          const nextVersion = versions.has(c.sqlLocaldbVersion)
+          const years = new Set(entries.map((e) => e.releaseYear));
+          const nextVersion = years.has(c.sqlLocaldbVersion)
             ? c.sqlLocaldbVersion
-            : entries.find((e) => e.version === "2022")?.version ?? entries[0].version;
+            : entries.find((e) => e.releaseYear === "2022")?.releaseYear ?? entries[0].releaseYear;
           return { ...c, sqlLocaldbVersion: nextVersion };
         });
       } catch (error) {
@@ -539,8 +539,11 @@ export function SetupWizard() {
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
                           {sqlLocaldbEntries.map((e) => (
-                            <SelectItem key={e.manifestKey} value={e.version} className="rounded-lg">
-                              <span className="font-medium">{e.version}</span>
+                            <SelectItem key={e.manifestKey} value={e.releaseYear} className="rounded-lg">
+                              <span className="font-medium">{e.releaseYear}</span>
+                              {e.version ? (
+                                <span className="text-muted-foreground"> · {e.version}</span>
+                              ) : null}
                               {e.installNotes ? (
                                 <span className="text-muted-foreground"> — {e.installNotes}</span>
                               ) : null}

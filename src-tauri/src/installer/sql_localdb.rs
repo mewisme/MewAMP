@@ -5,8 +5,8 @@
 //! ## Uninstall strategy
 //! Silent uninstall uses **`msiexec /x {ProductCode}`**, not the MSI path. A cached MSI path can move or be
 //! removed; **`/x` against an `.msi` file is unreliable** once Windows Installer has registered the product.
-//! We read `ProductCode` from the MSI database **before** install (Windows Installer COM via PowerShell) and
-//! persist it for later removal and for generated NSIS/WiX hook helpers.
+//! **`ProductCode`** comes from the **runtime manifest** (`productCode` on each SqlLocalDB package) and is
+//! persisted after install for in-app uninstall, generated `sqllocaldb_uninstall.cmd`, and NSIS/WiX hooks.
 
 use std::{
     io::{Read, Seek, SeekFrom},
@@ -275,6 +275,30 @@ async fn sqllocaldb_create_after_msi(instance: &str) -> Result<(), MewAmpError> 
     }
 }
 
+/// `sqllocaldb_version` / stored state may be either the **release year** (`2022`) or the **MSI product version** string.
+fn sql_localdb_selector_matches_pkg(selector: &str, pkg: &SqlLocalDbManifestPackage) -> bool {
+    let s = selector.trim();
+    s == pkg.version || s == pkg.release_year
+}
+
+/// Braced ProductCode from the manifest (same value used for `msiexec /x` uninstall).
+fn product_code_from_manifest(pkg: &SqlLocalDbManifestPackage) -> Result<String, MewAmpError> {
+    let Some(raw) = pkg.product_code.as_ref() else {
+        return Err(MewAmpError::Installer(format!(
+            "{LOG_SCOPE}: manifest entry '{}' is missing productCode (required for uninstall)",
+            pkg.manifest_key
+        )));
+    };
+    let code = raw.trim();
+    if !code.starts_with('{') || !code.ends_with('}') || code.len() < 3 {
+        return Err(MewAmpError::Installer(format!(
+            "{LOG_SCOPE}: manifest productCode for '{}' must be a braced GUID, got: {code}",
+            pkg.manifest_key
+        )));
+    }
+    Ok(code.to_string())
+}
+
 fn find_sql_localdb_package(
     platform: &PlatformPackages,
     version: &str,
@@ -282,7 +306,7 @@ fn find_sql_localdb_package(
     let entries = platform.sql_localdb_entries();
     entries
         .into_iter()
-        .find(|e| e.version == version)
+        .find(|e| sql_localdb_selector_matches_pkg(version, e))
         .ok_or_else(|| {
             MewAmpError::Installer(format!(
                 "{LOG_SCOPE}: version '{version}' is not available in the manifest for this platform"
@@ -359,66 +383,34 @@ pub fn clear_persisted_sql_localdb_artifacts() -> Result<(), MewAmpError> {
     Ok(())
 }
 
+/// `shell32!IsUserAnAdmin` — true when the process is running elevated with Administrator rights (UAC-aware).
 #[cfg(windows)]
-fn read_product_code_from_msi(msi_path: &Path) -> Result<String, MewAmpError> {
-    use std::process::Stdio;
-
-    let msi_path = msi_path
-        .canonicalize()
-        .map_err(|e| MewAmpError::Installer(format!("{LOG_SCOPE}: could not resolve MSI path: {e}")))?;
-    let msi_str = msi_path
-        .to_str()
-        .ok_or_else(|| MewAmpError::Installer(format!("{LOG_SCOPE}: MSI path is not valid UTF-8")))?;
-
-    // Pass the path via env to avoid PowerShell escaping pitfalls when paths contain spaces or quotes.
-    // Direct COM calls work reliably on Windows without brittle reflection InvokeMember chains.
-    let script = r#"
-$ErrorActionPreference = 'Stop'
-$p = $env:MEWAMP_MSI_PATH
-if (-not $p -or -not (Test-Path -LiteralPath $p)) { exit 2 }
-$installer = New-Object -ComObject WindowsInstaller.Installer
-$db = $installer.OpenDatabase($p, 0)
-$view = $db.OpenView("SELECT Value FROM Property WHERE Property='ProductCode'")
-$view.Execute($null)
-$rec = $view.Fetch()
-if ($null -eq $rec) { exit 3 }
-$code = $rec.StringData(1)
-if ([string]::IsNullOrWhiteSpace($code)) { exit 4 }
-Write-Output $code.Trim()
-exit 0
-"#;
-
-    let output = std::process::Command::new("powershell.exe")
-        .args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script])
-        .env("MEWAMP_MSI_PATH", msi_str)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .map_err(|e| MewAmpError::Installer(format!("{LOG_SCOPE}: failed to run ProductCode probe: {e}")))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(MewAmpError::Installer(format!(
-            "{LOG_SCOPE}: could not read ProductCode from MSI (exit {:?}): {}",
-            output.status.code(),
-            stderr.trim()
-        )));
+fn is_process_elevated_admin() -> bool {
+    #[link(name = "shell32")]
+    extern "system" {
+        fn IsUserAnAdmin() -> i32;
     }
+    unsafe { IsUserAnAdmin() != 0 }
+}
 
-    let code = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if code.is_empty() {
-        return Err(MewAmpError::Installer(
-            "{LOG_SCOPE}: ProductCode probe returned empty output".into(),
-        ));
+#[cfg(windows)]
+fn require_elevated_for_sql_localdb_msi() -> Result<(), MewAmpError> {
+    if is_process_elevated_admin() {
+        return Ok(());
     }
-    Ok(code)
+    let user_msg = "SqlLocalDB MSI requires an elevated (Administrator) process. \
+        Restart MewAMP with \"Run as administrator\", then retry the installation."
+        .to_string();
+    let _ = append_log(
+        "installer",
+        &format!("{LOG_SCOPE}: aborting — process is not elevated: {user_msg}"),
+    );
+    Err(MewAmpError::Installer(user_msg))
 }
 
 #[cfg(not(windows))]
-fn read_product_code_from_msi(_msi_path: &Path) -> Result<String, MewAmpError> {
-    Err(MewAmpError::Installer(
-        "{LOG_SCOPE}: ProductCode extraction is only implemented on Windows".into(),
-    ))
+fn require_elevated_for_sql_localdb_msi() -> Result<(), MewAmpError> {
+    Ok(())
 }
 
 fn interpret_msiexec_status(code: Option<i32>) -> Result<(), MewAmpError> {
@@ -451,6 +443,8 @@ fn quote_cmd_token_for_cmd_c(s: &str) -> String {
 /// Prompt. The app embeds `requireAdministrator` (see `build.rs`); child processes inherit that token.
 #[cfg(windows)]
 async fn run_msiexec(args: &[&str]) -> Result<(), MewAmpError> {
+    require_elevated_for_sql_localdb_msi()?;
+
     const CREATE_NO_WINDOW: u32 = 0x08000000;
 
     let mut line = String::from("msiexec.exe");
@@ -482,7 +476,7 @@ async fn run_msiexec(args: &[&str]) -> Result<(), MewAmpError> {
     interpret_msiexec_status(status.code())
 }
 
-/// `msiexec /L*v` verbose logs are UTF-16 LE (Unicode). Interpreting them as UTF-8 shows a space-like gap
+/// MSI `/log` (and verbose `/L*`) output is typically UTF-16 LE. Interpreting it as UTF-8 shows a space-like gap
 /// between ASCII letters (every other byte is NUL).
 fn decode_utf16_le_bytes(bytes: &[u8]) -> String {
     debug_assert!(bytes.len() % 2 == 0);
@@ -704,7 +698,10 @@ pub async fn install_optional_sql_localdb(
 
     let mut state = load_state()?;
     if let Some(existing) = state.sql_localdb.clone() {
-        if existing.installed_by_app && existing.version == pkg_ref.version && !force_reinstall {
+        if existing.installed_by_app
+            && sql_localdb_selector_matches_pkg(&existing.version, &pkg_ref)
+            && !force_reinstall
+        {
             if existing.instance_name == instance_name {
                 let _ = append_log(
                     "installer",
@@ -757,9 +754,13 @@ pub async fn install_optional_sql_localdb(
         }
     }
 
+    // Fail before downloading the MSI when a full install will run (skip/rename-only paths return above).
+    #[cfg(windows)]
+    require_elevated_for_sql_localdb_msi()?;
+
     let msi_cache = cache_downloads.join(format!(
         "sqllocaldb-{}-{}.msi",
-        pkg_ref.version,
+        pkg_ref.release_year,
         pkg_ref.sha256.chars().take(8).collect::<String>()
     ));
 
@@ -790,10 +791,10 @@ pub async fn install_optional_sql_localdb(
         verify_sha256(&msi_cache, &pkg_ref.sha256)?;
     }
 
-    let product_code = read_product_code_from_msi(&msi_cache)?;
+    let product_code = product_code_from_manifest(&pkg_ref)?;
     let _ = append_log(
         "installer",
-        &format!("{LOG_SCOPE}: extracted ProductCode from MSI database: {product_code}"),
+        &format!("{LOG_SCOPE}: using ProductCode from manifest for uninstall helpers: {product_code}"),
     );
 
     let ts = Utc::now().format("%Y%m%d-%H%M%S");
@@ -801,7 +802,11 @@ pub async fn install_optional_sql_localdb(
         .join("app")
         .join("logs");
     std::fs::create_dir_all(&logs_root)?;
-    let msi_log = logs_root.join(format!("sqllocaldb_msi_{}_{}.log", pkg_ref.version, ts));
+    let msi_log = logs_root.join(format!(
+        "sqllocaldb_msi_{}_{}.log",
+        pkg_ref.release_year,
+        ts
+    ));
     let msi_log_str = msi_log
         .to_str()
         .ok_or_else(|| MewAmpError::Installer(format!("{LOG_SCOPE}: MSI log path is not valid UTF-8")))?;
@@ -819,12 +824,21 @@ pub async fn install_optional_sql_localdb(
     let _ = append_log(
         "installer",
         &format!(
-            "{LOG_SCOPE}: running cmd /c msiexec /i (silent). MSI log file: {:?}",
+            "{LOG_SCOPE}: running cmd /c msiexec /i … IACCEPTSQLLOCALDBLICENSETERMS=YES /quiet /norestart /log … — MSI log: {:?}",
             msi_log
         ),
     );
 
-    let install_result = run_msiexec(&["/i", msi_path_str, "/quiet", "/norestart", "/L*v", msi_log_str]).await;
+    let install_result = run_msiexec(&[
+        "/i",
+        msi_path_str,
+        "IACCEPTSQLLOCALDBLICENSETERMS=YES",
+        "/quiet",
+        "/norestart",
+        "/log",
+        msi_log_str,
+    ])
+    .await;
 
     run_tail.store(false, Ordering::SeqCst);
     let _ = tail_task.await;
@@ -854,7 +868,10 @@ pub async fn install_optional_sql_localdb(
 
     let _ = append_log(
         "installer",
-        &format!("{LOG_SCOPE}: install finished successfully for version {}", pkg_ref.version),
+        &format!(
+            "{LOG_SCOPE}: install finished successfully ({} {})",
+            pkg_ref.release_year, pkg_ref.version
+        ),
     );
 
     Ok(())

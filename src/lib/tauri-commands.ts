@@ -16,10 +16,14 @@ export type InstallConfig = {
 
 export type SqlLocalDbManifestEntry = {
   manifestKey: string;
+  /** e.g. `2022` — matches `sqlLocaldbVersion` in the setup wizard */
+  releaseYear: string;
+  /** Windows Installer product version from the manifest */
   version: string;
   sha256: string;
   primaryUrl: string;
   installNotes?: string | null;
+  productCode?: string | null;
 };
 
 export type SqlLocalDbInstallRecord = {
