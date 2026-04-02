@@ -36,10 +36,9 @@ pub async fn install_sql_localdb_only(
     {
         Ok(()) => Ok(()),
         Err(err) => {
-            let _ = append_log(
-                "installer",
-                &format!("SqlLocalDB-only install failed: {err}"),
-            );
+            let msg = format!("SqlLocalDB-only install failed: {err}");
+            let _ = append_log("installer", &msg);
+            let _ = append_log("sqllocaldb", &msg);
             Err(err.into())
         }
     }

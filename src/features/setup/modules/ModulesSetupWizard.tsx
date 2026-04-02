@@ -10,6 +10,7 @@ import {
   sqlLocaldbModuleConfigAtom,
   setupInstallingAtom,
 } from "@/stores/setup";
+import { messageFromTauriInvoke } from "@/lib/invoke-error";
 import {
   clearLogFile,
   getLog,
@@ -186,8 +187,9 @@ export function ModulesSetupWizard({ onBack }: { onBack: () => void }) {
       toast.success("Module installation completed.");
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : "Installation failed. Check logs and try again.";
-      toast.error(message);
+      toast.error(
+        messageFromTauriInvoke(error, "Installation failed. Check the Installer log (Logs panel) and try again."),
+      );
     } finally {
       setInstalling(false);
     }

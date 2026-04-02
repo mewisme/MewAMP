@@ -20,7 +20,8 @@ export function buildLogMeta(showSqlLocaldbLogTab: boolean): LogMetaItem[] {
     base.push({
       key: "sqllocaldb",
       label: "SqlLocalDB",
-      empty: "No SqlLocalDB CLI logs yet. Use the Dashboard or Settings.",
+      empty:
+        "No SqlLocalDB logs yet. Module install errors also appear in the Installer tab. Dashboard and Settings write CLI output here.",
       icon: Server,
     });
   }

@@ -12,6 +12,7 @@ import {
   setupInstallingAtom,
   setupStepAtom,
 } from "@/stores/setup";
+import { messageFromTauriInvoke } from "@/lib/invoke-error";
 import { clearLogFile, getLog, startInstall } from "@/lib/tauri-commands";
 import { refreshSqlLocaldbGlobalState } from "@/stores/sql-localdb";
 import { coreSteps, DEFAULT_CORE_SETUP, toInstallPayload } from "@/features/setup/constants";
@@ -72,8 +73,9 @@ export function CoreSetupWizard({ onBack }: { onBack: () => void }) {
       toast.success("Runtime installation completed.");
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : "Installation failed. Check logs and try again.";
-      toast.error(message);
+      toast.error(
+        messageFromTauriInvoke(error, "Installation failed. Check the Installer log (Logs panel) and try again."),
+      );
     } finally {
       setInstalling(false);
     }

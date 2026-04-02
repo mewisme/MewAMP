@@ -8,7 +8,6 @@ import { clearLogFile, getLog } from "@/lib/tauri-commands";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { toast } from "sonner";
 import { platform } from "@tauri-apps/plugin-os";
-import { useSqlLocaldbRuntimeInit } from "@/features/sql-localdb/use-sql-localdb-runtime";
 import { AUTO_SCROLL_THRESHOLD_PX, type LogKey } from "@/features/logs/types";
 import { buildLogMeta } from "@/features/logs/build-log-meta";
 import { LogTabPane } from "@/features/logs/LogTabPane";
@@ -17,8 +16,7 @@ import { FileText } from "lucide-react";
 export function LogsPanel() {
   const location = useLocation();
   const osIsWindows = platform() === "windows";
-  const { sqlLocaldbRuntimeReady } = useSqlLocaldbRuntimeInit();
-  const showSqlLocaldbLogTab = osIsWindows && sqlLocaldbRuntimeReady;
+  const showSqlLocaldbLogTab = osIsWindows;
   const [activeTab, setActiveTab] = useState<LogKey>("app");
   const [logs, setLogs] = useState<Record<LogKey, string>>({
     app: "",
@@ -133,7 +131,7 @@ export function LogsPanel() {
         <PageHeader
           icon={FileText}
           title="Logs"
-          description="Live output for the app, installer, Apache, MariaDB, and SqlLocalDB CLI."
+          description="Live output for the app, installer, Apache, MariaDB, and SqlLocalDB (CLI and module install messages)."
           trailing={
             <Badge variant="outline" className="text-[10px] font-normal">
               Refresh 1s
