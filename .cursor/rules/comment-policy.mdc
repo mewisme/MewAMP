@@ -1,0 +1,35 @@
+---
+description: Minimal comments—only when unavoidable; prefer self-explanatory code
+alwaysApply: true
+---
+
+# Comment policy
+
+Assume every comment is unnecessary. Prefer **zero comments** in normal code.
+
+## When a comment is allowed
+
+Only if at least one of these is true:
+
+- The **reason** for the code cannot be inferred from the code (not “what” it does—**why** it must exist).
+- A **critical** warning, workaround, **platform-specific** quirk, or **non-obvious side effect** must be called out.
+- A **specific** `TODO` / `FIXME` / `HACK` is truly necessary (avoid vague placeholders).
+
+## Never use comments for
+
+- Explaining what the code does, simple logic, loops, conditions, or assignments.
+- Function purpose when the name already explains it.
+- UI structure, rendering flow, or event handlers.
+- Imports, exports, props, state updates, or CRUD logic.
+- Section separators or decorative banners.
+
+## Required workflow
+
+1. **First** improve naming, extract helpers, and simplify structure so the code documents itself.
+2. If a comment is not strictly required, **delete** it.
+3. Before finishing, **strip** non-essential comments.
+4. **Target**: no comments in most files.
+
+## Quick check
+
+If you can remove the comment and the next reader still understands behavior and *why* non-obvious choices exist, remove it.

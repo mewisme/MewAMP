@@ -72,6 +72,86 @@ pub fn validate_sql_localdb_instance_name(name: &str) -> Result<(), MewAmpError>
     Ok(())
 }
 
+/// LocalDB MSI deploys `SqlLocalDB.exe` under `Program Files\Microsoft SQL Server\<ver>\Tools\Binn\`, which is
+/// often missing from the **process** `PATH` until reboot. Resolve a real path before spawning.
+#[cfg(windows)]
+fn try_where_sqllocaldb_exe() -> Option<PathBuf> {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+    let mut cmd = std::process::Command::new("where.exe");
+    cmd.args(["sqllocaldb"]).creation_flags(CREATE_NO_WINDOW);
+    let out = cmd.output().ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let line = String::from_utf8_lossy(&out.stdout).lines().next()?.trim().to_string();
+    if line.is_empty() {
+        return None;
+    }
+    let p = PathBuf::from(line);
+    p.is_file().then_some(p)
+}
+
+#[cfg(windows)]
+fn scan_standard_sqllocaldb_installations() -> Option<PathBuf> {
+    let mut found: Vec<(u32, PathBuf)> = Vec::new();
+    for pf_key in ["ProgramFiles", "ProgramFiles(x86)"] {
+        let Ok(root) = std::env::var(pf_key) else {
+            continue;
+        };
+        let sql_root = PathBuf::from(root).join("Microsoft SQL Server");
+        if let Ok(rd) = std::fs::read_dir(&sql_root) {
+            for ent in rd.flatten() {
+                let name = ent.file_name().to_string_lossy().to_string();
+                if let Ok(n) = name.parse::<u32>() {
+                    let exe = ent.path().join("Tools").join("Binn").join("SqlLocalDB.exe");
+                    if exe.is_file() {
+                        found.push((n, exe));
+                    }
+                }
+            }
+        }
+        let odbc_root = sql_root.join("Client SDK").join("ODBC");
+        if let Ok(rd) = std::fs::read_dir(&odbc_root) {
+            for ent in rd.flatten() {
+                if let Ok(n) = ent.file_name().to_string_lossy().parse::<u32>() {
+                    let exe = ent.path().join("Tools").join("Binn").join("SqlLocalDB.exe");
+                    if exe.is_file() {
+                        found.push((n, exe));
+                    }
+                }
+            }
+        }
+    }
+    found.sort_by_key(|(n, _)| std::cmp::Reverse(*n));
+    found.into_iter().next().map(|(_, p)| p)
+}
+
+#[cfg(windows)]
+fn resolve_sqllocaldb_exe_path() -> PathBuf {
+    if let Some(p) = try_where_sqllocaldb_exe() {
+        return p;
+    }
+    if let Some(p) = scan_standard_sqllocaldb_installations() {
+        return p;
+    }
+    PathBuf::from("sqllocaldb.exe")
+}
+
+#[cfg(not(windows))]
+fn resolve_sqllocaldb_exe_path() -> PathBuf {
+    PathBuf::from("sqllocaldb.exe")
+}
+
+/// Quote for `.cmd` when the resolved path contains spaces.
+fn sqllocaldb_exe_line_in_batch(exe: &Path) -> String {
+    let s = exe.to_string_lossy();
+    if s.eq_ignore_ascii_case("sqllocaldb.exe") || !s.contains(' ') {
+        return s.into_owned();
+    }
+    format!("\"{}\"", s.replace('\"', "\"\""))
+}
+
 /// Run `sqllocaldb.exe <subcommand> <instance>` (Windows). Used by the installer and dashboard command.
 pub async fn run_sqllocaldb_cli(subcommand: &str, instance: &str) -> Result<(Option<i32>, String), MewAmpError> {
     if !cfg!(target_os = "windows") {
@@ -80,16 +160,17 @@ pub async fn run_sqllocaldb_cli(subcommand: &str, instance: &str) -> Result<(Opt
         ));
     }
     validate_sql_localdb_instance_name(instance)?;
-    let output = Command::new("sqllocaldb.exe")
-        .arg(subcommand)
-        .arg(instance)
-        .output()
-        .await
-        .map_err(|e| {
-            MewAmpError::Installer(format!(
-                "{LOG_SCOPE}: failed to execute sqllocaldb.exe {subcommand}: {e}"
-            ))
-        })?;
+    let exe = resolve_sqllocaldb_exe_path();
+    let mut cmd = Command::new(&exe);
+    cmd.arg(subcommand).arg(instance);
+    #[cfg(windows)]
+    cmd.creation_flags(0x08000000);
+    let output = cmd.output().await.map_err(|e| {
+        MewAmpError::Installer(format!(
+            "{LOG_SCOPE}: failed to execute {} {subcommand}: {e}",
+            exe.display()
+        ))
+    })?;
     let code = output.status.code();
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -146,15 +227,16 @@ pub async fn sql_localdb_instance_status(instance: &str) -> String {
 /// Lists named instances reported by `sqllocaldb info` (no instance argument).
 #[cfg(windows)]
 pub async fn list_sql_localdb_instance_names() -> Result<Vec<String>, MewAmpError> {
-    let output = Command::new("sqllocaldb.exe")
-        .arg("info")
-        .output()
-        .await
-        .map_err(|e| {
-            MewAmpError::Installer(format!(
-                "{LOG_SCOPE}: could not run 'sqllocaldb info' (is SqlLocalDB installed?): {e}"
-            ))
-        })?;
+    let exe = resolve_sqllocaldb_exe_path();
+    let mut cmd = Command::new(&exe);
+    cmd.arg("info");
+    cmd.creation_flags(0x08000000);
+    let output = cmd.output().await.map_err(|e| {
+        MewAmpError::Installer(format!(
+            "{LOG_SCOPE}: could not run '{} info' (is SqlLocalDB installed?): {e}",
+            exe.display()
+        ))
+    })?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     if !output.status.success() {
@@ -180,7 +262,7 @@ pub async fn list_sql_localdb_instance_names() -> Result<Vec<String>, MewAmpErro
     Ok(vec![])
 }
 
-/// `true` when `sqllocaldb info` succeeds (LocalDB runtime installed and on `PATH`).
+/// `true` when `sqllocaldb info` succeeds (LocalDB runtime installed; exe resolved via `PATH` or standard folders).
 pub async fn sql_localdb_runtime_is_available() -> bool {
     if !cfg!(target_os = "windows") {
         return false;
@@ -330,11 +412,12 @@ fn write_uninstall_helper_cmd(product_code: &str, instance_name: &str) -> Result
     }
     validate_sql_localdb_instance_name(instance_name)?;
     let inst = instance_name.trim();
+    let sqlexe = sqllocaldb_exe_line_in_batch(&resolve_sqllocaldb_exe_path());
     let body = format!(
         "@echo off\r\n\
          REM Generated by MewAMP: tear down LocalDB instance then remove SqlLocalDB MSI (ProductCode).\r\n\
-         sqllocaldb.exe stop {inst} 2>nul\r\n\
-         sqllocaldb.exe delete {inst} 2>nul\r\n\
+         {sqlexe} stop {inst} 2>nul\r\n\
+         {sqlexe} delete {inst} 2>nul\r\n\
          msiexec.exe /x {code} /quiet /norestart\r\n"
     );
     std::fs::write(&path, body)?;
