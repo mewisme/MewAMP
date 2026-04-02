@@ -2,8 +2,9 @@
 
 🔨 Other Changes
 
-- Update stop command logic and improve instance name resolution ([294941d](../../commit/294941d))
-- Bump version to 0.5.3 and update changelog ([f9756ac](../../commit/f9756ac))
+- Standardize SQL LocalDB version to 2025 across configurations ([9d2704b](../../commit/9d2704b))
+- Update SQL LocalDB version to 2025 and adjust related configurations ([aa2bc93](../../commit/aa2bc93))
+- Bump version to 0.5.4 and update changelog ([faedfd7](../../commit/faedfd7))
 
 
-📋 Full Changelog: [f9756ac...294941d](../../compare/f9756ac...294941d)
+📋 Full Changelog: [faedfd7...9d2704b](../../compare/faedfd7...9d2704b)
