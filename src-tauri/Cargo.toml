@@ -1,6 +1,6 @@
 [package]
 name = "MewAMP"
-version = "0.6.1"
+version = "0.6.2"
 description = "Local Apache, PHP, and MariaDB stack for desktop development with guided install and service management."
 authors = ["mewisme"]
 edition = "2021"
