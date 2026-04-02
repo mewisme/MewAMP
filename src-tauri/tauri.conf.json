@@ -44,6 +44,8 @@
   },
   "bundle": {
     "active": true,
+    "shortDescription": "Local Apache, PHP, and MariaDB stack for desktop development with guided install, service control, logs, and diagnostics.",
+    "longDescription": "MewAMP installs and manages Apache, PHP, MariaDB, and optional phpMyAdmin on your machine. A guided wizard resolves manifests, downloads runtimes, and writes configuration. Use the dashboard to start and stop services, browse logs, change settings, and export diagnostics. On Windows you can optionally add Microsoft SQL Express LocalDB alongside the stack.",
     "targets": "all",
     "icon": [
       "icons/32x32.png",

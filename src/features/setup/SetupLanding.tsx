@@ -1,5 +1,6 @@
 import { platform } from "@tauri-apps/plugin-os";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/PageHeader";
+import { PanelShell } from "@/components/PanelShell";
 import { Badge } from "@/components/ui/badge";
 import { getSetupModulesForPlatform } from "@/features/setup/modules/registry";
 import { cn } from "@/lib/utils";
@@ -16,21 +17,17 @@ export function SetupLanding({
   const modulesEnabled = availableModules.length > 0;
 
   return (
-    <Card className="overflow-hidden rounded-xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
-      <CardHeader className="gap-1 border-border/50">
-        <div className="flex items-center gap-2">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-muted">
-            <Rocket className="size-4 text-muted-foreground" />
-          </div>
-          <div>
-            <CardTitle className="text-lg">Setup</CardTitle>
-            <CardDescription className="text-xs">
-              Core stack install or optional modules (SqlLocalDB, etc.).
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="grid gap-3 md:grid-cols-2">
+    <PanelShell
+      className="overflow-hidden"
+      header={
+        <PageHeader
+          icon={Rocket}
+          title="Setup"
+          description="Core stack install or optional modules (SqlLocalDB, etc.)."
+        />
+      }
+      contentClassName="grid gap-3 space-y-0 md:grid-cols-2"
+    >
         <button
           type="button"
           onClick={onPickCore}
@@ -75,7 +72,6 @@ export function SetupLanding({
             Optional components (e.g. SqlLocalDB), per-module config, then install.
           </p>
         </button>
-      </CardContent>
-    </Card>
+    </PanelShell>
   );
 }

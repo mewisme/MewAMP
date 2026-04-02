@@ -18,7 +18,7 @@ export function InstallerLogPanel({
   onCopy: () => void;
 }) {
   return (
-    <Card className="rounded-2xl border-border/60 shadow-none">
+    <Card className="rounded-xl border-border/60 shadow-none">
       <CardContent className="space-y-4 p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>

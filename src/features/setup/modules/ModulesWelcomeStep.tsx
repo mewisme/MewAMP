@@ -7,7 +7,7 @@ import { Puzzle } from "lucide-react";
 export function ModulesWelcomeStep() {
   return (
     <Card className="rounded-2xl border-border/60 bg-muted/20 shadow-none">
-      <CardContent className="space-y-4 p-6">
+      <CardContent className="space-y-4 px-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-background border">

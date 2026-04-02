@@ -229,10 +229,10 @@ export function ModulesSetupWizard({ onBack }: { onBack: () => void }) {
   }
 
   return (
-    <Card className="overflow-hidden rounded-3xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
+    <Card className="overflow-hidden rounded-xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
       <ModulesSetupHeader onBack={onBack} step={step} progressValue={progressValue} />
 
-      <CardContent className="space-y-6 p-6">
+      <CardContent className="space-y-6 px-4">
         {step === 0 && <ModulesWelcomeStep />}
         {step === 1 && (
           <ModulesSelectStep

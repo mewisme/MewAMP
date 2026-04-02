@@ -29,7 +29,9 @@ export function AppSidebar() {
 
             <div className="min-w-0">
               <div className="text-sm font-semibold leading-tight">MewAMP</div>
-              <p className="text-[11px] text-muted-foreground leading-snug">Local web stack</p>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Apache, PHP, MariaDB and optional extras
+              </p>
             </div>
           </div>
         </div>

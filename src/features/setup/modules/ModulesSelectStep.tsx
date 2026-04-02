@@ -34,7 +34,7 @@ export function ModulesSelectStep({
                   : "rounded-2xl border-border/60 shadow-none"
               }
             >
-              <CardContent className="flex items-start gap-4 p-5">
+              <CardContent className="flex items-start gap-4 px-5">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted">
                   <Icon className="h-5 w-5 text-muted-foreground" />
                 </div>

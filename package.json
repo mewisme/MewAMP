@@ -1,5 +1,6 @@
 {
   "name": "MewAMP",
+  "description": "Local Apache, PHP, and MariaDB stack for desktop development with guided install, service control, logs, and diagnostics.",
   "private": true,
   "version": "0.5.6",
   "type": "module",

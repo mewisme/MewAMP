@@ -135,7 +135,7 @@ export function CoreSetupWizard({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <Card className="overflow-hidden rounded-3xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
+    <Card className="overflow-hidden rounded-xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
       <CoreSetupHeader onBack={onBack} step={step} progressValue={progressValue} />
 
       <CardContent className="space-y-6 p-6">
