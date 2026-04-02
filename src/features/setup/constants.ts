@@ -7,6 +7,8 @@ export const modulesSetupSteps = ["Welcome", "Select", "Config", "Install", "Com
 
 export const SQL_LOCALDB_INSTANCE_PATTERN = /^[a-zA-Z0-9_]+$/;
 
+export const DEFAULT_SQL_LOCALDB_RELEASE_YEAR = "2025";
+
 export const DEFAULT_CORE_SETUP: CoreSetupConfig = {
   runtimeRoot: "",
   dataRoot: "",
@@ -21,7 +23,7 @@ export function toInstallPayload(config: CoreSetupConfig): InstallConfig {
   return {
     ...config,
     installSqlLocaldb: false,
-    sqlLocaldbVersion: "2025",
+    sqlLocaldbVersion: DEFAULT_SQL_LOCALDB_RELEASE_YEAR,
     sqlLocaldbInstanceName: "MewAMP",
   };
 }

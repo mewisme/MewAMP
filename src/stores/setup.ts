@@ -1,5 +1,6 @@
 import { atom } from "jotai";
 import type { InstallConfig } from "@/lib/tauri-commands";
+import { DEFAULT_SQL_LOCALDB_RELEASE_YEAR } from "@/features/setup/constants";
 import type { SetupModuleId } from "@/features/setup/modules/registry";
 
 export type SetupFlow = "landing" | "core" | "modules";
@@ -18,7 +19,7 @@ export type SqlLocalDbModuleConfig = {
 };
 
 export const sqlLocaldbModuleConfigAtom = atom<SqlLocalDbModuleConfig>({
-  sqlLocaldbVersion: "2025",
+  sqlLocaldbVersion: DEFAULT_SQL_LOCALDB_RELEASE_YEAR,
   sqlLocaldbInstanceName: "MewAMP",
   forceReinstall: false,
 });

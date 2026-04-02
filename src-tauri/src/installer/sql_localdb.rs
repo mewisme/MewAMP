@@ -29,8 +29,10 @@ const UNINSTALL_CMD_NAME: &str = "sqllocaldb_uninstall.cmd";
 
 const LOG_SCOPE: &str = "SqlLocalDB";
 
+const DEFAULT_SQLLOCALDB_RELEASE_YEAR: &str = "2025";
+
 pub fn default_sqllocaldb_version() -> String {
-    "2025".into()
+    DEFAULT_SQLLOCALDB_RELEASE_YEAR.into()
 }
 
 pub fn default_sql_localdb_instance_name() -> String {
