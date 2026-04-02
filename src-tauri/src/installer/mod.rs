@@ -126,6 +126,50 @@ async fn ensure_runtime_processes_stopped() -> Result<(), MewAmpError> {
     Ok(())
 }
 
+pub async fn run_sql_localdb_install_only(
+    app: &tauri::AppHandle,
+    sqllocaldb_version: String,
+    sql_localdb_instance_name: String,
+    force_reinstall: bool,
+) -> Result<(), MewAmpError> {
+    let _ = append_log("installer", "SqlLocalDB-only install: starting");
+    let resolved = resolve_manifest().await?;
+    let platform = resolved
+        .manifest
+        .packages
+        .get("windows-x64")
+        .ok_or_else(|| MewAmpError::Manifest("missing windows-x64 package group".into()))?;
+
+    let state = load_state()?;
+    let root = if state.runtime_root.is_empty() {
+        app_root_dir()?
+    } else {
+        let rt = PathBuf::from(&state.runtime_root);
+        rt.parent()
+            .ok_or_else(|| MewAmpError::Installer("runtime_root path has no parent directory".into()))?
+            .to_path_buf()
+    };
+    let cache_downloads = root.join("cache").join("downloads");
+    fs::create_dir_all(&cache_downloads)?;
+
+    let config = InstallConfig {
+        runtime_root: String::new(),
+        data_root: String::new(),
+        apache_http_port: 8080,
+        apache_https_port: 8443,
+        mariadb_port: 3306,
+        install_phpmyadmin: false,
+        force_reinstall,
+        install_sqllocaldb: true,
+        sqllocaldb_version,
+        sql_localdb_instance_name,
+    };
+
+    sql_localdb::install_optional_sql_localdb(app, &config, platform, &cache_downloads, force_reinstall).await?;
+    let _ = append_log("installer", "SqlLocalDB-only install: completed");
+    Ok(())
+}
+
 pub async fn run_install(app: &tauri::AppHandle, config: InstallConfig) -> Result<(), MewAmpError> {
     let _ = append_log("installer", "Starting install pipeline");
     let _ = append_log("installer", "Stopping existing runtime processes before install");
@@ -197,14 +241,6 @@ pub async fn run_install(app: &tauri::AppHandle, config: InstallConfig) -> Resul
         state.ports.apache_https = config.apache_https_port;
         state.ports.mariadb = config.mariadb_port;
         save_state(&state)?;
-        sql_localdb::install_optional_sql_localdb(
-            app,
-            &config,
-            platform,
-            &cache_downloads,
-            config.force_reinstall,
-        )
-        .await?;
         return Ok(());
     }
 
@@ -391,14 +427,6 @@ pub async fn run_install(app: &tauri::AppHandle, config: InstallConfig) -> Resul
         None
     };
     save_state(&state)?;
-    sql_localdb::install_optional_sql_localdb(
-        app,
-        &config,
-        platform,
-        &cache_downloads,
-        config.force_reinstall,
-    )
-    .await?;
     ensure_runtime_processes_stopped().await?;
     let _ = append_log(
         "installer",

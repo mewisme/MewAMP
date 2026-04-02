@@ -70,6 +70,19 @@ export const startInstall = (config: InstallConfig) =>
     },
   });
 
+export type SqlLocalDbOnlyInstallConfig = {
+  sqlLocaldbVersion: string;
+  sqlLocaldbInstanceName: string;
+  forceReinstall: boolean;
+};
+
+export const installSqlLocaldbOnly = (config: SqlLocalDbOnlyInstallConfig) =>
+  invoke<void>("install_sql_localdb_only", {
+    sqllocaldb_version: config.sqlLocaldbVersion,
+    sql_localdb_instance_name: config.sqlLocaldbInstanceName,
+    force_reinstall: config.forceReinstall,
+  });
+
 export const getSqlLocalDbManifestEntries = () =>
   invoke<SqlLocalDbManifestEntry[]>("get_sql_localdb_manifest_entries");
 
@@ -105,6 +118,7 @@ export const startManagedService = (name: "apache" | "mariadb") =>
 export const stopService = (name: string) => invoke<void>("stop_service", { name });
 export const getDiagnostics = () => invoke<Record<string, unknown>>("get_diagnostics");
 export const exportDiagnostics = () => invoke<string>("export_diagnostics");
+export const getLogsDir = () => invoke<string>("get_logs_dir");
 export const getLog = (kind: "app" | "installer" | "apache" | "mariadb" | "sqllocaldb") =>
   invoke<string>("get_log", { kind });
 export const clearLogFile = (kind: "app" | "installer" | "apache" | "mariadb" | "sqllocaldb") =>

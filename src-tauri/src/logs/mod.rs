@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf};
 
 use crate::{error::MewAmpError, state::app_root_dir};
 
-fn logs_dir() -> Result<PathBuf, MewAmpError> {
+pub fn logs_dir() -> Result<PathBuf, MewAmpError> {
     let mut path = app_root_dir()?;
     path.push("app");
     path.push("logs");
