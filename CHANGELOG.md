@@ -2,8 +2,8 @@
 
 🔨 Other Changes
 
-- Add support for Windows process creation flags ([b66f50e](../../commit/b66f50e))
-- Bump version to 0.1.2 and update changelog ([d5652bf](../../commit/d5652bf))
+- Integrate SqlLocalDB management and runtime support ([771b31b](../../commit/771b31b))
+- Bump version to 0.2.0 and update changelog ([02f72d3](../../commit/02f72d3))
 
 
-📋 Full Changelog: [d5652bf...b66f50e](../../compare/d5652bf...b66f50e)
+📋 Full Changelog: [02f72d3...771b31b](../../compare/02f72d3...771b31b)
