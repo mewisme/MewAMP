@@ -16,36 +16,35 @@ export function SetupLanding({
   const modulesEnabled = availableModules.length > 0;
 
   return (
-    <Card className="overflow-hidden rounded-3xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
-      <CardHeader className="gap-2 border-b border-border/50 pb-5">
+    <Card className="overflow-hidden rounded-xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
+      <CardHeader className="gap-1 border-border/50">
         <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-muted">
-            <Rocket className="h-5 w-5 text-muted-foreground" />
+          <div className="flex size-9 items-center justify-center rounded-lg bg-muted">
+            <Rocket className="size-4 text-muted-foreground" />
           </div>
           <div>
-            <CardTitle className="text-2xl">Setup</CardTitle>
-            <CardDescription className="mt-1">
-              Core setup installs Apache, PHP, and MariaDB. Modules setup adds optional components you select and
-              configure.
+            <CardTitle className="text-lg">Setup</CardTitle>
+            <CardDescription className="text-xs">
+              Core stack install or optional modules (SqlLocalDB, etc.).
             </CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="grid gap-4 p-6 md:grid-cols-2">
+      <CardContent className="grid gap-3 md:grid-cols-2">
         <button
           type="button"
           onClick={onPickCore}
           className={cn(
-            "rounded-2xl border border-border/60 bg-muted/20 p-6 text-left transition-all hover:border-primary/30 hover:bg-primary/5",
+            "rounded-lg border border-border/60 bg-muted/20 p-4 text-left text-sm transition-colors hover:border-primary/30 hover:bg-primary/5",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           )}
         >
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-background border">
-            <Package className="h-6 w-6 text-muted-foreground" />
+          <div className="mb-2 flex size-10 items-center justify-center rounded-lg border bg-background">
+            <Package className="size-5 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-semibold">Core setup</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Paths, ports, phpMyAdmin, manifest resolution, and installation of the main runtime stack.
+          <h3 className="font-semibold leading-tight">Core setup</h3>
+          <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground">
+            Paths, ports, phpMyAdmin, manifest, and Apache / PHP / MariaDB install.
           </p>
         </button>
 
@@ -56,20 +55,24 @@ export function SetupLanding({
             if (modulesEnabled) onPickModules();
           }}
           className={cn(
-            "rounded-2xl border border-border/60 bg-muted/20 p-6 text-left transition-all",
+            "rounded-lg border border-border/60 bg-muted/20 p-4 text-left text-sm transition-colors",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             modulesEnabled ? "hover:border-primary/30 hover:bg-primary/5" : "cursor-not-allowed opacity-60"
           )}
         >
-          <div className="mb-4 flex items-start justify-between gap-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-background border">
-              <Puzzle className="h-6 w-6 text-muted-foreground" />
+          <div className="mb-2 flex items-start justify-between gap-2">
+            <div className="flex size-10 items-center justify-center rounded-lg border bg-background">
+              <Puzzle className="size-5 text-muted-foreground" />
             </div>
-            {!modulesEnabled && <Badge variant="secondary">None for this OS</Badge>}
+            {!modulesEnabled ? (
+              <Badge variant="secondary" className="text-[10px]">
+                N/A
+              </Badge>
+            ) : null}
           </div>
-          <h3 className="text-lg font-semibold">Modules setup</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Pick optional components (for example SqlLocalDB), configure each in its own card, then install.
+          <h3 className="font-semibold leading-tight">Modules setup</h3>
+          <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground">
+            Optional components (e.g. SqlLocalDB), per-module config, then install.
           </p>
         </button>
       </CardContent>

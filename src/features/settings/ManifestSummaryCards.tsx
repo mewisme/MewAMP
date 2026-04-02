@@ -10,16 +10,26 @@ export function ManifestSummaryCards({
   loadingSettings: boolean;
 }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid gap-3 md:grid-cols-2">
       <SummaryTile
         icon={Package}
-        label="Manifest Source"
-        value={loadingSettings ? "Loading..." : settings?.selected_manifest_source || "Not available"}
+        label="Manifest source"
+        value={
+          loadingSettings
+            ? undefined
+            : settings?.selected_manifest_source || "Not available"
+        }
+        loading={loadingSettings}
       />
       <SummaryTile
         icon={Server}
-        label="Manifest Version"
-        value={loadingSettings ? "Loading..." : settings?.selected_manifest_version || "Not available"}
+        label="Manifest version"
+        value={
+          loadingSettings
+            ? undefined
+            : settings?.selected_manifest_version || "Not available"
+        }
+        loading={loadingSettings}
       />
     </div>
   );

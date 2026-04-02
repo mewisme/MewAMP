@@ -1,31 +1,23 @@
-import { Button } from "@/components/ui/button";
-import { PackageOpen, Home } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { LayoutDashboard } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Empty() {
   return (
-    <div className="h-[calc(100vh-64px)] flex items-center justify-center p-4">
-      <div className="max-w-[400px] w-full px-6">
-        <div className="flex flex-col items-center text-center space-y-4">
-          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-            <PackageOpen className="w-12 h-12 text-primary" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-semibold tracking-tight">
-              Start Building Your App
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Start by creating a new page. You can choose from various
-              page types like home, about, contact, and more.
-            </p>
-          </div>
-          <Link to="/">
-            <Button variant="outline">
-              <Home className="w-4 h-4" />
-              Back to Home
-            </Button>
-          </Link>
-        </div>
+    <div className="flex h-[calc(100vh-64px)] items-center justify-center p-4">
+      <div className="w-full max-w-sm text-center">
+        <p className="text-sm font-medium text-foreground">This route is unused</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Open the dashboard to manage your local stack.
+        </p>
+        <Link
+          to="/dashboard"
+          className={cn(buttonVariants({ variant: "outline" }), "mt-4 inline-flex gap-2")}
+        >
+          <LayoutDashboard className="size-4" />
+          Dashboard
+        </Link>
       </div>
     </div>
   );

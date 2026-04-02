@@ -18,7 +18,7 @@ export function SectionIntro({
       </div>
       <div className="space-y-1">
         <h3 className="text-lg font-semibold">{title}</h3>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">{description}</p>
       </div>
     </div>
   );

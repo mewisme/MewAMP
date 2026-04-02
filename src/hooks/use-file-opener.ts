@@ -8,10 +8,6 @@ interface UseFileOpenerResult {
     error: string | null;
 }
 
-/**
- * Custom hook to handle file opening via CLI arguments
- * Listens for file-opened events and retrieves the file path from Tauri
- */
 export function useFileOpener(): UseFileOpenerResult {
     const [filePath, setFilePath] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);

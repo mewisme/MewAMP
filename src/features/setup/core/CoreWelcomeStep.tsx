@@ -12,22 +12,22 @@ export function CoreWelcomeStep({
   onManualSetup: () => void;
 }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-[1.15fr_.85fr]">
-      <Card className="rounded-2xl border-border/60 bg-muted/20 shadow-none">
-        <CardContent className="p-6">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-background border">
-              <Rocket className="h-5 w-5 text-muted-foreground" />
+    <div className="grid gap-3 lg:grid-cols-[1.15fr_.85fr]">
+      <Card className="rounded-xl border-border/60 bg-muted/20 shadow-none">
+        <CardContent className="p-4">
+          <div className="mb-4 flex items-center gap-2">
+            <div className="flex size-9 items-center justify-center rounded-lg border bg-background">
+              <Rocket className="size-4 text-muted-foreground" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold">Welcome to MewAMP</h3>
-              <p className="text-sm text-muted-foreground">
-                Set up Apache, PHP, MariaDB, and optional phpMyAdmin in a few guided steps.
+              <h3 className="text-base font-semibold leading-tight">Welcome to MewAMP</h3>
+              <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">
+                Apache, PHP, MariaDB, and optional phpMyAdmin in guided steps.
               </p>
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-3">
             <FeatureTile
               icon={Package}
               title="Manifest-based"
@@ -47,24 +47,22 @@ export function CoreWelcomeStep({
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border-border/60 shadow-none">
-        <CardContent className="flex h-full flex-col justify-between p-6">
-          <div className="space-y-3">
-            <Alert className="rounded-2xl">
-              <AlertTitle>Fast Setup</AlertTitle>
-              <AlertDescription>
-                Use default paths and ports, include phpMyAdmin, and jump directly to the install step.
-              </AlertDescription>
-            </Alert>
-          </div>
+      <Card className="rounded-xl border-border/60 shadow-none">
+        <CardContent className="flex h-full flex-col justify-between p-4">
+          <Alert className="rounded-lg py-3">
+            <AlertTitle className="text-sm">Fast setup</AlertTitle>
+            <AlertDescription className="line-clamp-2 text-xs leading-snug">
+              Default paths and ports, phpMyAdmin included, jump to install.
+            </AlertDescription>
+          </Alert>
 
-          <div className="mt-6 grid gap-3">
-            <Button size="lg" className="h-12 rounded-xl" onClick={onFastSetup}>
-              <Rocket className="mr-2 h-4 w-4" />
-              Fast Setup
+          <div className="mt-4 grid gap-2">
+            <Button type="button" onClick={onFastSetup}>
+              <Rocket className="mr-2 size-4" />
+              Fast setup
             </Button>
-            <Button size="lg" variant="outline" className="h-12 rounded-xl" onClick={onManualSetup}>
-              Manual Setup
+            <Button type="button" variant="outline" onClick={onManualSetup}>
+              Manual setup
             </Button>
           </div>
         </CardContent>

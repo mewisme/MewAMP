@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/PageHeader";
+import { PanelShell } from "@/components/PanelShell";
 import { exportDiagnostics, getDiagnostics } from "@/lib/tauri-commands";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { Activity } from "lucide-react";
 import { toast } from "sonner";
-import { DiagnosticsHeader } from "@/features/diagnostics/DiagnosticsHeader";
 import { DiagnosticsToolbar } from "@/features/diagnostics/DiagnosticsToolbar";
 import { DiagnosticsJsonView } from "@/features/diagnostics/DiagnosticsJsonView";
 
@@ -38,20 +40,37 @@ export function DiagnosticsPanel() {
     }
   };
 
+  const copyJson = async () => {
+    if (!data) return;
+    try {
+      await writeText(JSON.stringify(data, null, 2));
+      toast.success("Diagnostics JSON copied.");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to copy diagnostics.");
+    }
+  };
+
   return (
-    <Card className="rounded-2xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
-      <DiagnosticsHeader />
-
-      <CardContent className="space-y-4">
-        <DiagnosticsToolbar
-          loading={loading}
-          exporting={exporting}
-          onLoad={() => void loadDiagnostics()}
-          onExport={() => void handleExport()}
+    <PanelShell
+      header={
+        <PageHeader
+          icon={Activity}
+          title="Diagnostics"
+          description="Inspect runtime state and export a support bundle."
         />
+      }
+    >
+      <DiagnosticsToolbar
+        loading={loading}
+        exporting={exporting}
+        canCopy={Boolean(data)}
+        onLoad={() => void loadDiagnostics()}
+        onExport={() => void handleExport()}
+        onCopyJson={() => void copyJson()}
+      />
 
-        <DiagnosticsJsonView data={data} />
-      </CardContent>
-    </Card>
+      <DiagnosticsJsonView data={data} loading={loading} />
+    </PanelShell>
   );
 }

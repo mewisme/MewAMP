@@ -197,6 +197,12 @@ export function VersionDisplay({ className }: { className?: string }) {
                   </Button>
                 </div>
               )}
+
+
+            </div>
+
+            <div className="text-[10px] text-gray-500 text-center">
+              <span>© {new Date().getFullYear()} MewAMP. All rights reserved.</span>
             </div>
           </div>
         </DialogContent>

@@ -23,7 +23,7 @@ export function InstallerLogPanel({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="font-medium">{title}</div>
-            <p className="text-sm text-muted-foreground">{description}</p>
+            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">{description}</p>
           </div>
           <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={onCopy}>
             {copyLabel}

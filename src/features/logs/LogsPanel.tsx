@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/PageHeader";
+import { PanelShell } from "@/components/PanelShell";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { clearLogFile, getLog } from "@/lib/tauri-commands";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -9,8 +11,8 @@ import { platform } from "@tauri-apps/plugin-os";
 import { useSqlLocaldbRuntimeInit } from "@/features/sql-localdb/use-sql-localdb-runtime";
 import { AUTO_SCROLL_THRESHOLD_PX, type LogKey } from "@/features/logs/types";
 import { buildLogMeta } from "@/features/logs/build-log-meta";
-import { LogsHeader } from "@/features/logs/LogsHeader";
 import { LogTabPane } from "@/features/logs/LogTabPane";
+import { FileText } from "lucide-react";
 
 export function LogsPanel() {
   const location = useLocation();
@@ -126,17 +128,27 @@ export function LogsPanel() {
   };
 
   return (
-    <Card className="rounded-2xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
-      <LogsHeader />
-
-      <CardContent>
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as LogKey)} className="space-y-4">
-          <TabsList className="h-auto w-full flex-wrap justify-start gap-2 rounded-2xl bg-muted/40 p-0">
+    <PanelShell
+      header={
+        <PageHeader
+          icon={FileText}
+          title="Logs"
+          description="Live output for the app, installer, Apache, MariaDB, and SqlLocalDB CLI."
+          trailing={
+            <Badge variant="outline" className="text-[10px] font-normal">
+              Refresh 1s
+            </Badge>
+          }
+        />
+      }
+    >
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as LogKey)} className="gap-3">
+          <TabsList className="h-auto min-h-8 w-full flex-wrap justify-start gap-0.5 bg-muted/50 p-1">
             {logMeta.map((item) => {
               const Icon = item.icon;
               return (
-                <TabsTrigger key={item.key} value={item.key} className="rounded-xl p-4 data-[state=active]:shadow-none">
-                  <Icon className="mr-2 h-4 w-4" />
+                <TabsTrigger key={item.key} value={item.key} className="shrink-0 gap-1.5 px-2 py-1 text-xs">
+                  <Icon className="size-3.5" />
                   {item.label}
                 </TabsTrigger>
               );
@@ -159,8 +171,7 @@ export function LogsPanel() {
               onClear={() => void clearLogForTab(item.key, item.label)}
             />
           ))}
-        </Tabs>
-      </CardContent>
-    </Card>
+      </Tabs>
+    </PanelShell>
   );
 }

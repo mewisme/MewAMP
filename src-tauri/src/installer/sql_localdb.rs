@@ -1,13 +1,3 @@
-//! Optional Microsoft SQL Server Express LocalDB (MSI) integration.
-//!
-//! **Windows only** — callers should still guard with `cfg!(windows)` for UX; this module no-ops elsewhere.
-//!
-//! ## Uninstall strategy
-//! Silent uninstall uses **`msiexec /x {ProductCode}`**, not the MSI path. A cached MSI path can move or be
-//! removed; **`/x` against an `.msi` file is unreliable** once Windows Installer has registered the product.
-//! **`ProductCode`** comes from the **runtime manifest** (`productCode` on each SqlLocalDB package) and is
-//! persisted after install for in-app uninstall, generated `sqllocaldb_uninstall.cmd`, and NSIS/WiX hooks.
-
 use std::{
     io::{Read, Seek, SeekFrom},
     path::{Path, PathBuf},
@@ -37,7 +27,6 @@ use super::InstallConfig;
 
 const UNINSTALL_CMD_NAME: &str = "sqllocaldb_uninstall.cmd";
 
-/// Friendly label for installer log lines.
 const LOG_SCOPE: &str = "SqlLocalDB";
 
 pub fn default_sqllocaldb_version() -> String {
@@ -48,7 +37,6 @@ pub fn default_sql_localdb_instance_name() -> String {
     "MewAMP".into()
 }
 
-/// LocalDB instance names: ASCII alphanumeric + underscore only (safe for CLI / generated uninstall scripts).
 pub fn validate_sql_localdb_instance_name(name: &str) -> Result<(), MewAmpError> {
     let name = name.trim();
     if name.is_empty() {
@@ -72,8 +60,6 @@ pub fn validate_sql_localdb_instance_name(name: &str) -> Result<(), MewAmpError>
     Ok(())
 }
 
-/// LocalDB MSI deploys `SqlLocalDB.exe` under `Program Files\Microsoft SQL Server\<ver>\Tools\Binn\`, which is
-/// often missing from the **process** `PATH` until reboot. Resolve a real path before spawning.
 #[cfg(windows)]
 fn try_where_sqllocaldb_exe() -> Option<PathBuf> {
     use std::os::windows::process::CommandExt;
@@ -143,7 +129,6 @@ fn resolve_sqllocaldb_exe_path() -> PathBuf {
     PathBuf::from("sqllocaldb.exe")
 }
 
-/// Quote for `.cmd` when the resolved path contains spaces.
 fn sqllocaldb_exe_line_in_batch(exe: &Path) -> String {
     let s = exe.to_string_lossy();
     if s.eq_ignore_ascii_case("sqllocaldb.exe") || !s.contains(' ') {
@@ -152,7 +137,6 @@ fn sqllocaldb_exe_line_in_batch(exe: &Path) -> String {
     format!("\"{}\"", s.replace('\"', "\"\""))
 }
 
-/// Run `sqllocaldb.exe <subcommand> <instance>` (Windows). Used by the installer and dashboard command.
 pub async fn run_sqllocaldb_cli(subcommand: &str, instance: &str) -> Result<(Option<i32>, String), MewAmpError> {
     if !cfg!(target_os = "windows") {
         return Err(MewAmpError::Installer(
@@ -178,7 +162,6 @@ pub async fn run_sqllocaldb_cli(subcommand: &str, instance: &str) -> Result<(Opt
     Ok((code, text))
 }
 
-/// Parses the `State:` line from `sqllocaldb info <instance>` output (English LocalDB).
 fn parse_sqllocaldb_info_state(text: &str) -> &'static str {
     for line in text.lines() {
         let trimmed = line.trim();
@@ -201,7 +184,6 @@ fn parse_sqllocaldb_info_state(text: &str) -> &'static str {
     "unknown"
 }
 
-/// Runtime state from `sqllocaldb info <instance>`. Does not append to log files (safe for polling).
 pub async fn sql_localdb_instance_status(instance: &str) -> String {
     if !cfg!(target_os = "windows") {
         return "unknown".to_string();
@@ -224,7 +206,6 @@ pub async fn sql_localdb_instance_status(instance: &str) -> String {
     }
 }
 
-/// Lists named instances reported by `sqllocaldb info` (no instance argument).
 #[cfg(windows)]
 pub async fn list_sql_localdb_instance_names() -> Result<Vec<String>, MewAmpError> {
     let exe = resolve_sqllocaldb_exe_path();
@@ -262,7 +243,6 @@ pub async fn list_sql_localdb_instance_names() -> Result<Vec<String>, MewAmpErro
     Ok(vec![])
 }
 
-/// `true` when `sqllocaldb info` succeeds (LocalDB runtime installed; exe resolved via `PATH` or standard folders).
 pub async fn sql_localdb_runtime_is_available() -> bool {
     if !cfg!(target_os = "windows") {
         return false;
@@ -270,8 +250,6 @@ pub async fn sql_localdb_runtime_is_available() -> bool {
     list_sql_localdb_instance_names().await.is_ok()
 }
 
-/// Creates the default instance [`default_sql_localdb_instance_name`] if no instance matches (case-insensitive).
-/// Logs to `sqllocaldb.log`; used on app init so `MewAMP` exists when LocalDB is present.
 pub async fn ensure_default_mewamp_instance() -> Result<(), MewAmpError> {
     if !cfg!(target_os = "windows") {
         return Ok(());
@@ -357,13 +335,11 @@ async fn sqllocaldb_create_after_msi(instance: &str) -> Result<(), MewAmpError> 
     }
 }
 
-/// `sqllocaldb_version` / stored state may be either the **release year** (`2022`) or the **MSI product version** string.
 fn sql_localdb_selector_matches_pkg(selector: &str, pkg: &SqlLocalDbManifestPackage) -> bool {
     let s = selector.trim();
     s == pkg.version || s == pkg.release_year
 }
 
-/// Braced ProductCode from the manifest (same value used for `msiexec /x` uninstall).
 fn product_code_from_manifest(pkg: &SqlLocalDbManifestPackage) -> Result<String, MewAmpError> {
     let Some(raw) = pkg.product_code.as_ref() else {
         return Err(MewAmpError::Installer(format!(
@@ -400,8 +376,6 @@ fn uninstall_cmd_path() -> Result<PathBuf, MewAmpError> {
     Ok(state_dir()?.join(UNINSTALL_CMD_NAME))
 }
 
-/// Windows Installer writes `{GUID}` ProductCodes with braces — preserve them for `msiexec /x`.
-/// Stops/deletes the named LocalDB instance before MSI removal so files are not left locked.
 fn write_uninstall_helper_cmd(product_code: &str, instance_name: &str) -> Result<(), MewAmpError> {
     let path = uninstall_cmd_path()?;
     let code = product_code.trim();
@@ -415,7 +389,6 @@ fn write_uninstall_helper_cmd(product_code: &str, instance_name: &str) -> Result
     let sqlexe = sqllocaldb_exe_line_in_batch(&resolve_sqllocaldb_exe_path());
     let body = format!(
         "@echo off\r\n\
-         REM Generated by MewAMP: tear down LocalDB instance then remove SqlLocalDB MSI (ProductCode).\r\n\
          {sqlexe} stop {inst} 2>nul\r\n\
          {sqlexe} delete {inst} 2>nul\r\n\
          msiexec.exe /x {code} /quiet /norestart\r\n"
@@ -453,7 +426,6 @@ fn write_ownership_json(record: &SqlLocalDbInstallRecord) -> Result<(), MewAmpEr
     Ok(())
 }
 
-/// Public so `reset_install_state` and diagnostics can drop persisted uninstall helpers safely.
 pub fn clear_persisted_sql_localdb_artifacts() -> Result<(), MewAmpError> {
     let cmd = uninstall_cmd_path()?;
     if cmd.exists() {
@@ -466,7 +438,6 @@ pub fn clear_persisted_sql_localdb_artifacts() -> Result<(), MewAmpError> {
     Ok(())
 }
 
-/// `shell32!IsUserAnAdmin` — true when the process is running elevated with Administrator rights (UAC-aware).
 #[cfg(windows)]
 fn is_process_elevated_admin() -> bool {
     #[link(name = "shell32")]
@@ -498,7 +469,7 @@ fn require_elevated_for_sql_localdb_msi() -> Result<(), MewAmpError> {
 
 fn interpret_msiexec_status(code: Option<i32>) -> Result<(), MewAmpError> {
     match code {
-        Some(0) | Some(3010) => Ok(()), // success; 3010 = success, reboot required (we use /norestart)
+        Some(0) | Some(3010) => Ok(()),
         Some(c) => Err(MewAmpError::Installer(format!(
             "{LOG_SCOPE}: msiexec exited with code {c}. See the MSI log in the installer output for details."
         ))),
@@ -508,7 +479,6 @@ fn interpret_msiexec_status(code: Option<i32>) -> Result<(), MewAmpError> {
     }
 }
 
-/// Quote a single token for use inside `cmd.exe /c "<line>"` when needed (paths with spaces, metacharacters).
 #[cfg(windows)]
 fn quote_cmd_token_for_cmd_c(s: &str) -> String {
     let needs_quote = s.is_empty()
@@ -522,8 +492,6 @@ fn quote_cmd_token_for_cmd_c(s: &str) -> String {
     }
 }
 
-/// SqlLocalDB MSI installs use **`cmd.exe /c msiexec ...`** so behavior matches a manual elevated Command
-/// Prompt. The app embeds `requireAdministrator` (see `build.rs`); child processes inherit that token.
 #[cfg(windows)]
 async fn run_msiexec(args: &[&str]) -> Result<(), MewAmpError> {
     require_elevated_for_sql_localdb_msi()?;
@@ -559,8 +527,6 @@ async fn run_msiexec(args: &[&str]) -> Result<(), MewAmpError> {
     interpret_msiexec_status(status.code())
 }
 
-/// MSI `/log` (and verbose `/L*`) output is typically UTF-16 LE. Interpreting it as UTF-8 shows a space-like gap
-/// between ASCII letters (every other byte is NUL).
 fn decode_utf16_le_bytes(bytes: &[u8]) -> String {
     debug_assert!(bytes.len() % 2 == 0);
     let u16s: Vec<u16> = bytes
@@ -570,7 +536,6 @@ fn decode_utf16_le_bytes(bytes: &[u8]) -> String {
     String::from_utf16_lossy(&u16s)
 }
 
-/// Append raw file bytes to `pending`, consume complete UTF-16 code units, leave 0–1 trailing byte in `pending`.
 fn push_msi_log_utf16le(pending: &mut Vec<u8>, chunk: &[u8]) -> String {
     pending.extend_from_slice(chunk);
     let trailing = pending.len() % 2;
@@ -732,7 +697,6 @@ async fn tail_msi_log_to_installer_log(log_path: PathBuf, run: Arc<AtomicBool>) 
     }
 }
 
-/// Silent uninstall via ProductCode (preferred) or falls back to repair metadata only for diagnostics.
 pub async fn msiexec_uninstall_by_product_code(product_code: &str) -> Result<(), MewAmpError> {
     let code = product_code.trim();
     let _ = append_log(
@@ -742,8 +706,6 @@ pub async fn msiexec_uninstall_by_product_code(product_code: &str) -> Result<(),
     run_msiexec(&["/x", code, "/quiet", "/norestart"]).await
 }
 
-/// If the user opted in, download/verify the MSI, run a silent install, stream the MSI log into `installer.log`,
-/// and persist ownership metadata for in-app and bundled-uninstaller removal.
 pub async fn install_optional_sql_localdb(
     app: &tauri::AppHandle,
     config: &InstallConfig,
@@ -837,7 +799,6 @@ pub async fn install_optional_sql_localdb(
         }
     }
 
-    // Fail before downloading the MSI when a full install will run (skip/rename-only paths return above).
     #[cfg(windows)]
     require_elevated_for_sql_localdb_msi()?;
 
@@ -960,7 +921,6 @@ pub async fn install_optional_sql_localdb(
     Ok(())
 }
 
-/// Remove SqlLocalDB when this app previously recorded an install. Safe no-op if nothing is recorded.
 pub async fn uninstall_app_managed_sql_localdb() -> Result<(), MewAmpError> {
     if !cfg!(target_os = "windows") {
         return Ok(());

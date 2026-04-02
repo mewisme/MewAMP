@@ -25,7 +25,7 @@ export function OptionalComponentTile({
             </div>
             <div>
               <div className="font-medium">{title}</div>
-              <p className="text-sm text-muted-foreground">{description}</p>
+              <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">{description}</p>
             </div>
           </div>
           <Badge variant="secondary">Optional</Badge>

@@ -38,7 +38,7 @@ pub fn list_dir(path: &str) -> Result<Vec<FileEntry>, String> {
             name,
             path: path.to_string_lossy().to_string(),
             is_dir,
-            children: None, // We don't recursively load for now, frontend can request on expand
+            children: None,
         });
     }
 

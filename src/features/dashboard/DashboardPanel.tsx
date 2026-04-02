@@ -3,7 +3,10 @@ import { useAtom } from "jotai";
 import { platform } from "@tauri-apps/plugin-os";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
-import { servicesAtom, type ServiceRuntimeState } from "@/stores/services";
+import { LayoutDashboard } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
+import { PanelShell } from "@/components/PanelShell";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   getHtdocsPath,
   getInstallState,
@@ -16,16 +19,15 @@ import {
   stopService,
   type InstallState,
 } from "@/lib/tauri-commands";
+import { servicesAtom, type ServiceRuntimeState } from "@/stores/services";
 import { useSqlLocaldbInstanceOptions } from "@/features/sql-localdb/use-sql-localdb-instance-options";
 import { useSqlLocaldbRuntimeInit } from "@/features/sql-localdb/use-sql-localdb-runtime";
 import { mapSqlLocaldbStatus, isTransitionState } from "@/features/dashboard/dashboard-utils";
 import { DashboardNotInstalled } from "@/features/dashboard/DashboardNotInstalled";
 import { QuickActionsCard } from "@/features/dashboard/QuickActionsCard";
 import { ServiceCard } from "@/features/dashboard/ServiceCard";
-import { SimpleServiceCard } from "@/features/dashboard/SimpleServiceCard";
 import { SqlLocaldbServiceCard } from "@/features/dashboard/SqlLocaldbServiceCard";
 import { SqlLocaldbInfoDialog } from "@/features/dashboard/SqlLocaldbInfoDialog";
-import { Globe, Settings2, FolderOpen, Activity } from "lucide-react";
 
 export function DashboardPanel() {
   const [services, setServices] = useAtom(servicesAtom);
@@ -39,8 +41,8 @@ export function DashboardPanel() {
   const sqlLocaldbBusyRef = useRef(false);
 
   const osIsWindows = platform() === "windows";
-  const { sqlLocaldbRuntimeReady } = useSqlLocaldbRuntimeInit();
-  const managedSqlName = installState?.sql_localdb?.instance_name?.trim();
+  const { sqlLocaldbRuntimeReady, sqlLocaldbGlobal } = useSqlLocaldbRuntimeInit();
+  const managedSqlName = sqlLocaldbGlobal.managedInstanceName ?? undefined;
   const { instanceOptions, refreshInstances } = useSqlLocaldbInstanceOptions(
     managedSqlName,
     sqlLocaldbInstance,
@@ -66,9 +68,9 @@ export function DashboardPanel() {
   }, [sqlLocaldbBusy]);
 
   useEffect(() => {
-    const name = installState?.sql_localdb?.instance_name?.trim();
+    const name = sqlLocaldbGlobal.managedInstanceName?.trim();
     if (name) setSqlLocaldbInstance(name);
-  }, [installState?.sql_localdb?.instance_name]);
+  }, [sqlLocaldbGlobal.managedInstanceName]);
 
   useEffect(() => {
     if (isInstalled !== true || !osIsWindows || !sqlLocaldbRuntimeReady) return;
@@ -119,7 +121,25 @@ export function DashboardPanel() {
   }
 
   if (isInstalled === null) {
-    return <div className="text-sm text-muted-foreground">Loading install state...</div>;
+    return (
+      <PanelShell
+        header={
+          <PageHeader
+            icon={LayoutDashboard}
+            title="Dashboard"
+            description="Services, status, and shortcuts for this install."
+          />
+        }
+      >
+        <Skeleton className="h-14 w-full rounded-xl" />
+        <div className="grid gap-3 md:grid-cols-2">
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
+        </div>
+      </PanelShell>
+    );
   }
 
   const openLocalhost = async () => {
@@ -261,68 +281,58 @@ export function DashboardPanel() {
   };
 
   return (
-    <div className="space-y-4">
-      <QuickActionsCard
-        onOpenLocalhost={() => void openLocalhost()}
-        onOpenPhpMyAdmin={() => void openPhpMyAdmin()}
-        onOpenHtdocs={() => void openHtdocs()}
-        onOpenRuntime={() => void openRuntime()}
-        onOpenConfig={() => void openConfig()}
-        onOpenLogFolder={() => void openLogFolder()}
-      />
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <ServiceCard
-          name="Apache"
-          type="apache"
-          status={services.apache}
-          description="Handles HTTP requests for your local web apps."
-          onStart={() => startDashboardService("apache")}
-          onStop={() => stopDashboardService("apache")}
-          onRestart={() => restartService("apache")}
-        />
-
-        <ServiceCard
-          name="MariaDB"
-          type="database"
-          status={services.mariadb}
-          description="Local database server for apps and phpMyAdmin."
-          onStart={() => startDashboardService("mariadb")}
-          onStop={() => stopDashboardService("mariadb")}
-          onRestart={() => restartService("mariadb")}
-        />
-
-        <SimpleServiceCard
-          name="PHP"
-          type="php"
-          description="Used by Apache via FastCGI."
-          actions={[
-            { label: "Open htdocs", onClick: openHtdocs, icon: FolderOpen },
-            { label: "Open Runtime", onClick: openRuntime, icon: Activity },
-          ]}
-        />
-
-        <SimpleServiceCard
-          name="phpMyAdmin"
-          type="phpmyadmin"
-          description="Browser-based database management UI."
-          actions={[
-            { label: "Open Browser", onClick: openPhpMyAdmin, icon: Globe },
-            { label: "Open Config", onClick: openConfig, icon: Settings2 },
-          ]}
-        />
-
-        {osIsWindows && sqlLocaldbRuntimeReady && (
-          <SqlLocaldbServiceCard
-            instanceOptions={instanceOptions}
-            instance={sqlLocaldbInstance}
-            onInstanceChange={setSqlLocaldbInstance}
-            status={sqlLocaldbStatus}
-            busy={sqlLocaldbBusy}
-            onCommand={(cmd) => void runSqlLocaldb(cmd)}
+    <>
+      <PanelShell
+        header={
+          <PageHeader
+            icon={LayoutDashboard}
+            title="Dashboard"
+            description="Services, status, and shortcuts for this install."
           />
-        )}
-      </div>
+        }
+      >
+        <QuickActionsCard
+          onOpenLocalhost={() => void openLocalhost()}
+          onOpenPhpMyAdmin={() => void openPhpMyAdmin()}
+          onOpenHtdocs={() => void openHtdocs()}
+          onOpenRuntime={() => void openRuntime()}
+          onOpenConfig={() => void openConfig()}
+          onOpenLogFolder={() => void openLogFolder()}
+        />
+
+        <div className="grid gap-3 md:grid-cols-2">
+            <ServiceCard
+              name="Apache"
+              type="apache"
+              status={services.apache}
+              description="Handles HTTP requests for your local web apps."
+              onStart={() => startDashboardService("apache")}
+              onStop={() => stopDashboardService("apache")}
+              onRestart={() => restartService("apache")}
+            />
+
+            <ServiceCard
+              name="MariaDB"
+              type="database"
+              status={services.mariadb}
+              description="Local database server for apps and phpMyAdmin."
+              onStart={() => startDashboardService("mariadb")}
+              onStop={() => stopDashboardService("mariadb")}
+              onRestart={() => restartService("mariadb")}
+            />
+
+            {osIsWindows && sqlLocaldbRuntimeReady && (
+              <SqlLocaldbServiceCard
+                instanceOptions={instanceOptions}
+                instance={sqlLocaldbInstance}
+                onInstanceChange={setSqlLocaldbInstance}
+                status={sqlLocaldbStatus}
+                busy={sqlLocaldbBusy}
+                onCommand={(cmd) => void runSqlLocaldb(cmd)}
+              />
+            )}
+        </div>
+      </PanelShell>
 
       <SqlLocaldbInfoDialog
         open={sqlLocaldbInfoOpen}
@@ -330,6 +340,6 @@ export function DashboardPanel() {
         instanceLabel={sqlLocaldbInstance.trim()}
         text={sqlLocaldbInfoText}
       />
-    </div>
+    </>
   );
 }

@@ -8,12 +8,12 @@ export function FeatureTile({
   description: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
-      <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
-        <Icon className="h-4 w-4 text-muted-foreground" />
+    <div className="rounded-lg border border-border/60 bg-background/60 p-3">
+      <div className="mb-2 flex size-8 items-center justify-center rounded-md bg-muted">
+        <Icon className="size-3.5 text-muted-foreground" />
       </div>
-      <div className="font-medium">{title}</div>
-      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+      <div className="text-sm font-medium leading-tight">{title}</div>
+      <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground">{description}</p>
     </div>
   );
 }

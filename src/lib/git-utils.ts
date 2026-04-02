@@ -60,10 +60,6 @@ export function getGitStatusColor(status: string | undefined): string {
     }
 }
 
-/**
- * Check if a folder or any of its children have a specific git status
- * This is used to apply colors to folders when their contents are modified/added
- */
 export function getFolderGitStatus(
     folderPath: string,
     gitStatus: Record<string, string>
@@ -84,11 +80,6 @@ export function getFolderGitStatus(
     return undefined;
 }
 
-/**
- * Get the effective git status for a file or folder
- * If the item doesn't have a direct status, check if any parent folder has a status
- * This ensures children of newly added folders inherit the green color
- */
 export function getEffectiveGitStatus(
     itemPath: string,
     isDir: boolean,

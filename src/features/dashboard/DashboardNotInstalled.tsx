@@ -1,16 +1,27 @@
 import { useNavigate } from "react-router-dom";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { PageHeader } from "@/components/PageHeader";
+import { PanelShell } from "@/components/PanelShell";
 import { Button } from "@/components/ui/button";
+import { AlertTriangle } from "lucide-react";
 
 export function DashboardNotInstalled() {
   const navigate = useNavigate();
   return (
-    <Alert>
-      <AlertTitle>Setup required</AlertTitle>
-      <AlertDescription className="space-y-3">
-        <p>Runtime is not installed yet. Run Setup Wizard first to download Apache, PHP, MariaDB, and phpMyAdmin.</p>
-        <Button onClick={() => navigate("/setup")}>Open Setup Wizard</Button>
-      </AlertDescription>
-    </Alert>
+    <PanelShell
+      header={
+        <PageHeader
+          icon={AlertTriangle}
+          title="Setup required"
+          description="Install the runtime stack before using the dashboard."
+        />
+      }
+    >
+      <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+        Run Setup Wizard first to download Apache, PHP, MariaDB, and phpMyAdmin.
+      </p>
+      <Button type="button" onClick={() => navigate("/setup")}>
+        Open Setup Wizard
+      </Button>
+    </PanelShell>
   );
 }

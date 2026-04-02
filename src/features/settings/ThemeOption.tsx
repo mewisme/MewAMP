@@ -18,21 +18,21 @@ export function ThemeOption({
     <Button
       type="button"
       variant="outline"
+      size="sm"
       onClick={onClick}
       className={cn(
-        "h-auto min-h-12 justify-between rounded-xl px-4 py-3",
+        "h-auto min-h-8 justify-between gap-2 py-2",
         active ? "border-primary/30 bg-primary/10 text-foreground" : "text-muted-foreground"
       )}
     >
-      <div className="flex items-center gap-2">
-        <Icon className="h-4 w-4 shrink-0" />
-        <span>{label}</span>
+      <div className="flex items-center gap-1.5">
+        <Icon className="size-3.5 shrink-0" />
+        <span className="text-xs">{label}</span>
       </div>
 
       {active ? (
-        <div className="flex items-center gap-1 text-xs font-medium text-primary">
-          <Check className="h-4 w-4" />
-          <span>Selected</span>
+        <div className="flex items-center gap-0.5 text-[10px] font-medium text-primary">
+          <Check className="size-3.5" />
         </div>
       ) : null}
     </Button>

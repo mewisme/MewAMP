@@ -15,7 +15,7 @@ export function ModulesWelcomeStep() {
             </div>
             <div className="min-w-0">
               <h3 className="text-lg font-semibold">Optional modules</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 line-clamp-2 text-sm leading-snug text-muted-foreground">
                 Add components beyond the core Apache, PHP, and MariaDB stack. Choose what you need on the next step,
                 then configure each module in its own card.
               </p>

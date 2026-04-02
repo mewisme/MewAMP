@@ -12,7 +12,6 @@ pub struct PackageDefinition {
     pub sha256: String,
     #[serde(default)]
     pub install_notes: Option<String>,
-    /// Windows Installer ProductCode (braced GUID). **Required** for SqlLocalDB MSI packages — used for `msiexec /x` uninstall (not the `.msi` path).
     #[serde(default)]
     pub product_code: Option<String>,
 }
@@ -23,7 +22,6 @@ pub struct PlatformPackages {
     pub php: PackageDefinition,
     pub mariadb: PackageDefinition,
     pub phpmyadmin: PackageDefinition,
-    /// SQL Server Express LocalDB MSI keyed as `sqllocaldb{year}` in the manifest (e.g. `sqllocaldb2022`).
     #[serde(default)]
     pub sqllocaldb2022: Option<PackageDefinition>,
     #[serde(default)]
@@ -35,7 +33,6 @@ pub struct PlatformPackages {
 }
 
 impl PlatformPackages {
-    /// Collect SqlLocalDB package entries from the manifest (keys + definitions), sorted by version descending.
     pub fn sql_localdb_entries(&self) -> Vec<SqlLocalDbManifestPackage> {
         let mut entries: Vec<SqlLocalDbManifestPackage> = [
             (
@@ -78,14 +75,11 @@ impl PlatformPackages {
     }
 }
 
-/// Serializable manifest slice for SqlLocalDB (used by setup UI via Tauri command).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SqlLocalDbManifestPackage {
     pub manifest_key: String,
-    /// Release year from manifest key (`sqllocaldb2022` → `2022`); matches `sqllocaldb_version` in install config.
     pub release_year: String,
-    /// Windows Installer product version from the manifest `version` field.
     pub version: String,
     pub sha256: String,
     pub primary_url: String,

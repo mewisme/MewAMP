@@ -21,8 +21,8 @@ export function PortField({
         <Label className="text-sm font-medium">{label}</Label>
         <Input type="number" value={value} onChange={(e) => onChange(Number(e.target.value))} />
         <div className="space-y-1 text-xs text-muted-foreground">
-          <p>{example}</p>
-          <p>
+          <p className="line-clamp-2 leading-snug">{example}</p>
+          <p className="leading-snug">
             Default: <code>{defaultValue}</code>
           </p>
         </div>

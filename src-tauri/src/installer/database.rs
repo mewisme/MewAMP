@@ -37,8 +37,6 @@ pub async fn initialize_mariadb_data(mysqld_path: &Path, data_dir: &Path) -> Res
         return Ok(());
     }
 
-    // If data dir exists but is incomplete (e.g. from failed previous init),
-    // clear it so bootstrap starts from a truly empty directory.
     clear_dir_contents(data_dir).await?;
 
     let status = Command::new(mysqld_path)
@@ -61,8 +59,6 @@ pub async fn initialize_mariadb_data(mysqld_path: &Path, data_dir: &Path) -> Res
         let stderr = String::from_utf8_lossy(&status.stderr);
         let stdout = String::from_utf8_lossy(&status.stdout);
 
-        // MariaDB Windows builds may not support --initialize-insecure on mysqld.
-        // Fallback to installer bootstrap executables when available.
         let unknown_init_option = stderr.contains("unknown option '--initialize-insecure'");
         if unknown_init_option {
             let bin_dir = mysqld_path

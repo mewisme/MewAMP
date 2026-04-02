@@ -71,7 +71,6 @@ impl ServiceManager {
             });
         }
 
-        // Detect immediate startup crashes and report a real error to UI.
         sleep(Duration::from_millis(700)).await;
         if let Some(status) = child
             .try_wait()

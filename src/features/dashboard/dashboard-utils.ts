@@ -1,4 +1,4 @@
-import { Globe, Server, Database, Activity } from "lucide-react";
+import { Server, Database } from "lucide-react";
 import type { ServiceRuntimeState } from "@/stores/services";
 
 export function mapSqlLocaldbStatus(raw: string): ServiceRuntimeState {
@@ -14,16 +14,12 @@ export function mapSqlLocaldbStatus(raw: string): ServiceRuntimeState {
   }
 }
 
-export function getServiceMeta(type: "apache" | "database" | "php" | "phpmyadmin" | "sqllocaldb") {
+export function getServiceMeta(type: "apache" | "database" | "sqllocaldb") {
   switch (type) {
     case "apache":
       return { icon: Server, iconWrapClass: "bg-muted" };
     case "database":
       return { icon: Database, iconWrapClass: "bg-muted" };
-    case "php":
-      return { icon: Activity, iconWrapClass: "bg-muted" };
-    case "phpmyadmin":
-      return { icon: Globe, iconWrapClass: "bg-muted" };
     case "sqllocaldb":
       return { icon: Database, iconWrapClass: "bg-muted" };
   }

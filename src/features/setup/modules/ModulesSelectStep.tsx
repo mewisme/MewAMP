@@ -40,8 +40,8 @@ export function ModulesSelectStep({
                 </div>
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="font-medium">{m.title}</div>
-                  <p className="text-sm text-muted-foreground">{m.shortDescription}</p>
-                  <p className="text-xs text-muted-foreground">{m.selectionDetail}</p>
+                  <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">{m.shortDescription}</p>
+                  <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">{m.selectionDetail}</p>
                 </div>
                 <Switch
                   checked={on}

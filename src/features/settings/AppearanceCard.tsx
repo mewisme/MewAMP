@@ -1,5 +1,7 @@
 import { Moon, Monitor, Palette, Sun } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { SectionHeader } from "@/components/SectionHeader";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeOption } from "@/features/settings/ThemeOption";
 
 export function AppearanceCard({
@@ -12,18 +14,9 @@ export function AppearanceCard({
   setTheme: (theme: string) => void;
 }) {
   return (
-    <Card className="rounded-2xl border-border/60 shadow-none">
-      <CardContent className="space-y-4 p-5">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted">
-            <Palette className="h-4 w-4 text-muted-foreground" />
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="font-medium">Appearance</div>
-            <p className="text-sm text-muted-foreground">Choose how MewAMP looks across the app.</p>
-          </div>
-        </div>
+    <Card className="rounded-xl border-border/60 shadow-none">
+      <CardContent className="space-y-3 p-4">
+        <SectionHeader icon={Palette} title="Appearance" description="Theme for the MewAMP UI." />
 
         {mounted ? (
           <div className="grid gap-2 sm:grid-cols-3">
@@ -33,9 +26,9 @@ export function AppearanceCard({
           </div>
         ) : (
           <div className="grid gap-2 sm:grid-cols-3">
-            <div className="h-11 rounded-xl border border-border/60 bg-muted/20" />
-            <div className="h-11 rounded-xl border border-border/60 bg-muted/20" />
-            <div className="h-11 rounded-xl border border-border/60 bg-muted/20" />
+            <Skeleton className="h-8 rounded-lg" />
+            <Skeleton className="h-8 rounded-lg" />
+            <Skeleton className="h-8 rounded-lg" />
           </div>
         )}
       </CardContent>

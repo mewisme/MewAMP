@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -7,6 +8,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { SectionHeader } from "@/components/SectionHeader";
 import { Loader2, Trash2 } from "lucide-react";
 
 export function SqlLocaldbDeletePanel({
@@ -22,31 +34,29 @@ export function SqlLocaldbDeletePanel({
   busy: boolean;
   onSubmit: () => void;
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const runDelete = () => {
+    onSubmit();
+    setConfirmOpen(false);
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="space-y-1">
-        <div className="font-medium">Delete instance</div>
-        <p className="text-sm text-muted-foreground">Select an existing LocalDB instance to remove.</p>
-      </div>
+    <div className="space-y-3">
+      <SectionHeader title="Delete instance" description="Remove an existing LocalDB instance." />
 
-      <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-        CLI output is written to <strong>Logs → SqlLocalDB</strong>.
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="settings-sqllocaldb-delete-instance">Existing instance</Label>
+      <div className="space-y-1.5">
+        <Label className="text-xs" htmlFor="settings-sqllocaldb-delete-instance">
+          Instance
+        </Label>
         <Select value={selectedInstance} onValueChange={(v) => typeof v === "string" && onSelectedInstanceChange(v)}>
-          <SelectTrigger
-            id="settings-sqllocaldb-delete-instance"
-            className="h-11 w-full rounded-xl font-mono text-sm"
-            size="default"
-          >
+          <SelectTrigger id="settings-sqllocaldb-delete-instance" className="w-full font-mono text-xs" size="default">
             <SelectValue placeholder="Select instance" />
           </SelectTrigger>
 
-          <SelectContent className="rounded-xl">
+          <SelectContent>
             {instanceOptions.map((name) => (
-              <SelectItem key={name} value={name} className="rounded-lg font-mono text-sm">
+              <SelectItem key={name} value={name} className="font-mono text-xs">
                 {name}
               </SelectItem>
             ))}
@@ -57,9 +67,8 @@ export function SqlLocaldbDeletePanel({
       <Button
         type="button"
         variant="destructive"
-        className="h-11 rounded-xl"
         disabled={busy || !selectedInstance.trim()}
-        onClick={onSubmit}
+        onClick={() => setConfirmOpen(true)}
       >
         {busy ? (
           <>
@@ -69,10 +78,29 @@ export function SqlLocaldbDeletePanel({
         ) : (
           <>
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete Instance
+            Delete instance
           </>
         )}
       </Button>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete LocalDB instance?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Instance <span className="font-mono text-foreground">{selectedInstance.trim() || "(none)"}</span> will be
+              removed from this machine. This cannot be undone from MewAMP. Databases hosted only on that instance may
+              become inaccessible until you recreate or restore them.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" disabled={busy || !selectedInstance.trim()} onClick={() => runDelete()}>
+              Delete permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

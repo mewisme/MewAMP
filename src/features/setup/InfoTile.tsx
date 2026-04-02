@@ -11,7 +11,7 @@ export function InfoTile({
     <Card className="rounded-2xl border-border/60 shadow-none">
       <CardContent className="space-y-2 p-5">
         <div className="font-medium">{title}</div>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
   );

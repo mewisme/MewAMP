@@ -2,10 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { platform } from "@tauri-apps/plugin-os";
 import { listSqlLocaldbInstances } from "@/lib/tauri-commands";
 
-/**
- * Options for SqlLocalDB instance {@link Select}: `sqllocaldb info` plus managed / current selection and a default.
- * @param fetchEnabled When false, skips listing (e.g. LocalDB not installed).
- */
 export function useSqlLocaldbInstanceOptions(
   managedInstanceName: string | undefined,
   selectedValue: string,

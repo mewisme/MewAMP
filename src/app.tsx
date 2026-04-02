@@ -6,7 +6,9 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from '@/components/layout';
 import { Toaster } from '@/components/ui/sonner';
 import { Spinner } from '@/components/ui/spinner';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { Titlebar } from '@/features/titlebar';
+import { SqlLocaldbGlobalSync } from '@/features/sql-localdb/SqlLocaldbGlobalSync';
 
 const Home = lazy(() => import('./pages/home'));
 const Empty = lazy(() => import('./pages/empty'));
@@ -67,7 +69,8 @@ function App() {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <>
+      <TooltipProvider delay={300}>
+        <SqlLocaldbGlobalSync />
         <Titlebar />
         <BrowserRouter>
           <Layout>
@@ -91,7 +94,7 @@ function App() {
             </Suspense>
           </Layout>
         </BrowserRouter>
-      </>
+      </TooltipProvider>
     </ThemeProvider>
   );
 }

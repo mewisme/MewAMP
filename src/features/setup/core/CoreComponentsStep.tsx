@@ -56,7 +56,7 @@ export function CoreComponentsStep({
         <CardContent className="flex items-start justify-between gap-4 p-5">
           <div className="space-y-1">
             <div className="font-medium">Force reinstall runtimes</div>
-            <p className="text-sm text-muted-foreground">
+            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
               Redownload and reinstall packages even if the installed versions already match the selected manifest.
             </p>
           </div>

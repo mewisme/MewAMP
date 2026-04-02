@@ -10,15 +10,12 @@ export type InstallConfig = {
   forceReinstall: boolean;
   installSqlLocaldb: boolean;
   sqlLocaldbVersion: string;
-  /** Letters, digits, underscores only; default MewAMP */
   sqlLocaldbInstanceName: string;
 };
 
 export type SqlLocalDbManifestEntry = {
   manifestKey: string;
-  /** e.g. `2022` — matches `sqlLocaldbVersion` in the setup wizard */
   releaseYear: string;
-  /** Windows Installer product version from the manifest */
   version: string;
   sha256: string;
   primaryUrl: string;
@@ -34,7 +31,6 @@ export type SqlLocalDbInstallRecord = {
   install_timestamp: string;
   install_log_path: string | null;
   staged_msi_path: string | null;
-  /** Absent in state files from older app versions; treat as MewAMP */
   instance_name?: string;
 };
 
@@ -99,11 +95,9 @@ export const sqlLocaldbCli = (
 
 export const listSqlLocaldbInstances = () => invoke<string[]>("list_sql_localdb_instances");
 
-/** `running` | `stopped` | `starting` | `stopping` | `unknown` — from `sqllocaldb info` (no log write). */
 export const getSqlLocaldbInstanceStatus = (instance: string) =>
   invoke<string>("get_sql_localdb_instance_status", { instance });
 
-/** Probe LocalDB; if present, ensure default `MewAMP` instance. Returns whether LocalDB is usable. */
 export const sqlLocaldbInitRuntime = () => invoke<boolean>("sql_localdb_init_runtime");
 export const resetInstallState = () => invoke<void>("reset_install_state");
 export const checkPorts = (ports: number[]) => invoke<PortStatus[]>("check_ports", { ports });

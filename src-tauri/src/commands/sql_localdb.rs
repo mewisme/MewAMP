@@ -19,7 +19,6 @@ pub async fn get_sql_localdb_manifest_entries() -> Result<Vec<SqlLocalDbManifest
     Ok(platform.sql_localdb_entries())
 }
 
-/// Matches the backend guard for scheduled installs (frontend should still hide UI using the OS plugin).
 #[tauri::command]
 pub fn sql_localdb_installer_supported() -> bool {
     cfg!(target_os = "windows")
@@ -35,8 +34,6 @@ pub async fn uninstall_app_managed_sql_localdb() -> Result<(), ErrorPayload> {
         .map_err(Into::into)
 }
 
-/// Runs `sqllocaldb.exe` with a whitelisted subcommand (`create` | `start` | `stop` | `delete` | `info`).
-/// Appends output to the **SqlLocalDB** log file (`logs/sqllocaldb.log`) for the Logs UI.
 #[tauri::command]
 pub async fn sql_localdb_cli(command: String, instance: String) -> Result<String, ErrorPayload> {
     if !cfg!(target_os = "windows") {
@@ -103,8 +100,6 @@ pub async fn list_sql_localdb_instances() -> Result<Vec<String>, ErrorPayload> {
         .map_err(Into::into)
 }
 
-/// Parsed `State:` from `sqllocaldb info <instance>`: `running` | `stopped` | `starting` | `stopping` | `unknown`.
-/// Intended for dashboard polling (does not write SqlLocalDB log files).
 #[tauri::command]
 pub async fn get_sql_localdb_instance_status(instance: String) -> Result<String, ErrorPayload> {
     if !cfg!(target_os = "windows") {
@@ -113,8 +108,6 @@ pub async fn get_sql_localdb_instance_status(instance: String) -> Result<String,
     Ok(sql_localdb::sql_localdb_instance_status(instance.as_str()).await)
 }
 
-/// Probes SqlLocalDB (`sqllocaldb info`). If available, ensures the default **`MewAMP`** instance exists.
-/// Frontend uses this to decide whether to show SqlLocalDB UI (dashboard, settings tools, logs tab).
 #[tauri::command]
 pub async fn sql_localdb_init_runtime() -> Result<bool, ErrorPayload> {
     if !cfg!(target_os = "windows") {

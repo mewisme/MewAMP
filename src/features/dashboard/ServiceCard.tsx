@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getServiceMeta, getStatusBadgeClass } from "@/features/dashboard/dashboard-utils";
-import { Play, Square, RotateCcw } from "lucide-react";
+import { Play, RotateCcw, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function ServiceCard({
@@ -28,59 +28,63 @@ export function ServiceCard({
   const isStarting = status === "starting";
   const isStopping = status === "stopping";
   const isBusy = isStarting || isStopping;
+  const showStart = status !== "running" && status !== "starting";
+  const showStopRestart = status !== "stopped";
+  const actionCount = (showStart ? 1 : 0) + (showStopRestart ? 2 : 0);
 
   return (
-    <Card className="h-full rounded-2xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm transition-all hover:border-border">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl", meta.iconWrapClass)}>
-              <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
+    <Card className="h-full rounded-xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm transition-colors hover:border-border">
+      <CardHeader className="">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 items-start gap-2">
+            <div className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", meta.iconWrapClass)}>
+              <Icon className="size-4 shrink-0 text-muted-foreground" />
             </div>
 
-            <div className="min-h-[60px] min-w-0 flex-1">
-              <CardTitle className="text-lg leading-tight">{name}</CardTitle>
-              <CardDescription className="mt-1 line-clamp-2 min-h-[40px] leading-snug">{description}</CardDescription>
+            <div className="min-w-0">
+              <CardTitle className="text-base leading-tight">{name}</CardTitle>
+              <CardDescription className="mt-0.5 text-xs">{description}</CardDescription>
             </div>
           </div>
 
           <Badge
             variant="outline"
-            className={cn("shrink-0 rounded-full px-2.5 py-1 text-xs capitalize", getStatusBadgeClass(status))}
+            className={cn("shrink-0 px-2 py-0.5 text-[10px] capitalize", getStatusBadgeClass(status))}
           >
             {status}
           </Badge>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        <div className="rounded-xl border border-border/50 bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-          {isRunning
-            ? `${name} is currently running and ready to use.`
-            : isStarting
-              ? `${name} is starting...`
-              : isStopping
-                ? `${name} is stopping...`
-                : status === "stopped"
-                  ? `${name} is currently stopped.`
-                  : `Current ${name} status could not be determined.`}
-        </div>
+      <CardContent className="space-y-2 pt-0">
+        <div
+          className={cn(
+            "grid gap-3",
+            actionCount === 1 && "grid-cols-1",
+            actionCount === 2 && "grid-cols-2",
+            actionCount === 3 && "grid-cols-3"
+          )}
+        >
+          {showStart ? (
+            <Button type="button" size="sm" onClick={onStart} disabled={isRunning || isBusy} className="gap-1">
+              <Play className="size-3.5" />
+              Start
+            </Button>
+          ) : null}
 
-        <div className="grid grid-cols-3 gap-2">
-          <Button onClick={onStart} disabled={isRunning || isBusy} className="h-11 rounded-xl">
-            <Play className="mr-2 h-4 w-4" />
-            Start
-          </Button>
+          {showStopRestart ? (
+            <>
+              <Button type="button" size="sm" variant="outline" onClick={onStop} disabled={!isRunning || isBusy} className="gap-1">
+                <Square className="size-3.5" />
+                Stop
+              </Button>
 
-          <Button variant="outline" onClick={onStop} disabled={!isRunning || isBusy} className="h-11 rounded-xl">
-            <Square className="mr-2 h-4 w-4" />
-            Stop
-          </Button>
-
-          <Button variant="outline" onClick={onRestart} disabled={!isRunning || isBusy} className="h-11 rounded-xl">
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Restart
-          </Button>
+              <Button type="button" size="sm" variant="outline" onClick={onRestart} disabled={!isRunning || isBusy} className="gap-1">
+                <RotateCcw className="size-3.5" />
+                Restart
+              </Button>
+            </>
+          ) : null}
         </div>
       </CardContent>
     </Card>

@@ -1,4 +1,17 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { SectionHeader } from "@/components/SectionHeader";
+import { MutedCallout } from "@/components/MutedCallout";
 import { ManagedStateBadge } from "@/features/settings/ManagedStateBadge";
 import { Loader2, Trash2 } from "lucide-react";
 
@@ -11,28 +24,32 @@ export function SqlLocaldbUninstallPanel({
   busy: boolean;
   onUninstall: () => void;
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const runUninstall = () => {
+    onUninstall();
+    setConfirmOpen(false);
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="space-y-1">
-        <div className="font-medium">Uninstall SqlLocalDB</div>
-        <p className="text-sm text-muted-foreground">Remove SqlLocalDB only when it was installed by MewAMP.</p>
-      </div>
+    <div className="space-y-3">
+      <SectionHeader title="Uninstall" description="Only for installs performed by MewAMP." />
 
-      <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+      <MutedCallout>
         {managed
-          ? "This SqlLocalDB install is tracked by MewAMP and can be removed safely here."
-          : "This system does not currently have an app-managed SqlLocalDB install."}
-      </div>
+          ? "This SqlLocalDB install is tracked by MewAMP and can be removed here."
+          : "No app-managed SqlLocalDB install on this system."}
+      </MutedCallout>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <ManagedStateBadge managed={managed} />
 
         <Button
           type="button"
           variant="outline"
-          className="rounded-xl text-destructive hover:text-destructive"
+          className="text-destructive hover:text-destructive"
           disabled={busy || !managed}
-          onClick={onUninstall}
+          onClick={() => setConfirmOpen(true)}
         >
           {busy ? (
             <>
@@ -47,6 +64,24 @@ export function SqlLocaldbUninstallPanel({
           )}
         </Button>
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Uninstall SqlLocalDB?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the MewAMP-managed SqlLocalDB runtime from this system. LocalDB instances and data may stop
+              working until you reinstall. This action is not easily reversible from this app.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" disabled={busy} onClick={() => runUninstall()}>
+              Uninstall
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

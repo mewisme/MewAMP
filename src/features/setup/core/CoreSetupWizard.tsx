@@ -13,6 +13,7 @@ import {
   setupStepAtom,
 } from "@/stores/setup";
 import { clearLogFile, getLog, startInstall } from "@/lib/tauri-commands";
+import { refreshSqlLocaldbGlobalState } from "@/stores/sql-localdb";
 import { coreSteps, DEFAULT_CORE_SETUP, toInstallPayload } from "@/features/setup/constants";
 import { CoreSetupHeader } from "@/features/setup/core/CoreSetupHeader";
 import { CoreSetupFooter } from "@/features/setup/core/CoreSetupFooter";
@@ -66,6 +67,7 @@ export function CoreSetupWizard({ onBack }: { onBack: () => void }) {
     setInstalling(true);
     try {
       await startInstall(toInstallPayload(config));
+      void refreshSqlLocaldbGlobalState();
       setStep(6);
       toast.success("Runtime installation completed.");
     } catch (error) {

@@ -19,24 +19,22 @@ const links = [
 
 export function AppSidebar() {
   return (
-    <aside className="w-64 border-r border-border/60 bg-background/80 p-4 backdrop-blur-sm">
+    <aside className="w-60 border-r border-border/60 bg-background/80 p-3 backdrop-blur-sm">
       <div className="flex h-full flex-col">
-        <div className="mb-4 rounded-2xl border border-border/60 bg-card/60 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-muted">
-              <Package className="h-5 w-5 text-muted-foreground" />
+        <div className="mb-3 rounded-xl border border-border/60 bg-card/60 p-3">
+          <div className="flex items-center gap-2">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+              <Package className="size-4 text-muted-foreground" />
             </div>
 
             <div className="min-w-0">
-              <div className="text-base font-semibold leading-tight">MewAMP</div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Local web stack manager
-              </p>
+              <div className="text-sm font-semibold leading-tight">MewAMP</div>
+              <p className="text-[11px] text-muted-foreground leading-snug">Local web stack</p>
             </div>
           </div>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1.5">
+        <nav className="flex flex-1 flex-col gap-1">
           {links.map((link) => {
             const Icon = link.icon;
 
@@ -46,7 +44,7 @@ export function AppSidebar() {
                 to={link.to}
                 className={({ isActive }) =>
                   cn(
-                    "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
+                    "group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-all",
                     isActive
                       ? "border border-border/60 bg-secondary text-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
@@ -73,12 +71,6 @@ export function AppSidebar() {
             );
           })}
         </nav>
-
-        <div className="mt-4 rounded-2xl border border-border/60 bg-card/40 px-3 py-3">
-          <p className="text-xs text-muted-foreground">
-            Manage Apache, PHP, MariaDB, phpMyAdmin, logs, and setup flows in one place.
-          </p>
-        </div>
       </div>
     </aside>
   );

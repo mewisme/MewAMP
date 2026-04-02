@@ -44,13 +44,10 @@ pub struct InstallConfig {
     pub install_phpmyadmin: bool,
     #[serde(default)]
     pub force_reinstall: bool,
-    /// Windows-only optional component; ignored on other platforms.
     #[serde(default)]
     pub install_sqllocaldb: bool,
-    /// Manifest `version` field for the selected SqlLocalDB package (default `2022`).
     #[serde(default = "default_sqllocaldb_version_for_config")]
     pub sqllocaldb_version: String,
-    /// LocalDB instance name: letters, digits, underscore only (default `MewAMP`).
     #[serde(default = "default_sqllocaldb_instance_name_for_config")]
     pub sql_localdb_instance_name: String,
 }
@@ -110,7 +107,6 @@ async fn kill_windows_process(image_name: &str) -> Result<(), MewAmpError> {
         .await
         .map_err(|e| MewAmpError::Installer(format!("failed to execute taskkill for {image_name}: {e}")))?;
 
-    // taskkill returns non-zero when process doesn't exist; treat as non-fatal.
     if status.success() {
         Ok(())
     } else {

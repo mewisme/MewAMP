@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function SqlLocaldbInfoDialog({
   open,
@@ -25,9 +26,11 @@ export function SqlLocaldbInfoDialog({
           <DialogTitle>SqlLocalDB info</DialogTitle>
           <DialogDescription className="font-mono text-xs">{instanceLabel}</DialogDescription>
         </DialogHeader>
-        <pre className="max-h-[min(50vh,24rem)] overflow-auto rounded-lg border border-border/60 bg-muted/30 p-3 text-xs leading-relaxed whitespace-pre-wrap wrap-break-word">
-          {text || "(no output)"}
-        </pre>
+        <ScrollArea className="max-h-[min(50vh,24rem)] rounded-lg border border-border/60 bg-muted/30">
+          <pre className="p-3 text-xs leading-relaxed whitespace-pre-wrap wrap-break-word">
+            {text || "(no output)"}
+          </pre>
+        </ScrollArea>
         <DialogFooter showCloseButton />
       </DialogContent>
     </Dialog>

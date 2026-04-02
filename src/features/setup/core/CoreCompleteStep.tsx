@@ -11,7 +11,7 @@ export function CoreCompleteStep({ installPhpmyadmin }: { installPhpmyadmin: boo
         </div>
         <div className="space-y-2">
           <h3 className="text-2xl font-semibold">Installation complete</h3>
-          <p className="max-w-xl text-sm text-muted-foreground">
+          <p className="max-w-xl line-clamp-2 text-sm leading-snug text-muted-foreground">
             Your MewAMP runtime stack has been installed successfully. You can now start services and begin local
             development.
           </p>

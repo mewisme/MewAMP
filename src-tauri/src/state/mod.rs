@@ -29,18 +29,15 @@ fn default_sql_localdb_instance_name() -> String {
     "MewAMP".into()
 }
 
-/// Tracks SqlLocalDB installs performed by MewAMP so uninstallers can remove only app-owned MSI registrations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SqlLocalDbInstallRecord {
     pub installed_by_app: bool,
     pub version: String,
     pub manifest_key: String,
-    /// Windows Installer ProductCode including braces, e.g. `{GUID}` — required for reliable `msiexec /x`.
     pub product_code: String,
     pub install_timestamp: String,
     pub install_log_path: Option<String>,
     pub staged_msi_path: Option<String>,
-    /// Named LocalDB instance created via `sqllocaldb create` after MSI install.
     #[serde(default = "default_sql_localdb_instance_name")]
     pub instance_name: String,
 }
@@ -107,7 +104,6 @@ pub fn state_file_path() -> Result<PathBuf, MewAmpError> {
     Ok(state_dir()?.join("state.json"))
 }
 
-/// JSON mirror of [`SqlLocalDbInstallRecord`] for NSIS/WiX hooks and external tooling.
 pub fn sql_localdb_ownership_json_path() -> Result<PathBuf, MewAmpError> {
     Ok(state_dir()?.join("sql_localdb_ownership.json"))
 }

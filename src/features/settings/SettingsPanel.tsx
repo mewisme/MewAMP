@@ -3,9 +3,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { platform } from "@tauri-apps/plugin-os";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/PageHeader";
+import { PanelShell } from "@/components/PanelShell";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings2 } from "lucide-react";
-import { checkPorts, getInstallState, sqlLocaldbCli, uninstallAppManagedSqlLocaldb } from "@/lib/tauri-commands";
+import { checkPorts, sqlLocaldbCli, uninstallAppManagedSqlLocaldb } from "@/lib/tauri-commands";
 import { useSqlLocaldbInstanceOptions } from "@/features/sql-localdb/use-sql-localdb-instance-options";
 import { useSqlLocaldbRuntimeInit } from "@/features/sql-localdb/use-sql-localdb-runtime";
 import type { PortStatus, SettingsSnapshot, SqlLocalDbAction } from "@/features/settings/types";
@@ -21,17 +23,18 @@ export function SettingsPanel() {
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [portStatus, setPortStatus] = useState<PortStatus>("idle");
   const [mounted, setMounted] = useState(false);
+  const [settingsTab, setSettingsTab] = useState("overview");
 
   const [sqlLocaldbBusy, setSqlLocaldbBusy] = useState(false);
-  const [sqlLocaldbManaged, setSqlLocaldbManaged] = useState(false);
-  const [sqlLocaldbVersion, setSqlLocaldbVersion] = useState<string | null>(null);
-  const [sqlLocaldbInstanceName, setSqlLocaldbInstanceName] = useState<string | null>(null);
   const [sqlLocaldbCreateInstance, setSqlLocaldbCreateInstance] = useState("MewAMP");
   const [sqlLocaldbDeleteInstance, setSqlLocaldbDeleteInstance] = useState("");
   const [sqlLocaldbAction, setSqlLocaldbAction] = useState<SqlLocalDbAction>("create");
 
   const osIsWindows = platform() === "windows";
-  const { sqlLocaldbRuntimeReady, recheckSqlLocaldbRuntime } = useSqlLocaldbRuntimeInit();
+  const { sqlLocaldbRuntimeReady, recheckSqlLocaldbRuntime, sqlLocaldbGlobal } = useSqlLocaldbRuntimeInit();
+  const sqlLocaldbManaged = sqlLocaldbGlobal.managedByApp;
+  const sqlLocaldbVersion = sqlLocaldbGlobal.version;
+  const sqlLocaldbInstanceName = sqlLocaldbGlobal.managedInstanceName;
   const showSqlLocaldbSettingsCard = osIsWindows && (sqlLocaldbManaged || sqlLocaldbRuntimeReady);
 
   const { instanceOptions, refreshInstances } = useSqlLocaldbInstanceOptions(
@@ -63,24 +66,6 @@ export function SettingsPanel() {
   }, []);
 
   useEffect(() => {
-    if (!osIsWindows) return;
-
-    const load = async () => {
-      try {
-        const st = await getInstallState();
-        const rec = st.sql_localdb;
-        setSqlLocaldbManaged(Boolean(rec?.installed_by_app));
-        setSqlLocaldbVersion(rec?.version ?? null);
-        setSqlLocaldbInstanceName(rec?.instance_name?.trim() || null);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    void load();
-  }, [osIsWindows]);
-
-  useEffect(() => {
     const n = sqlLocaldbInstanceName?.trim();
     if (n) setSqlLocaldbDeleteInstance(n);
   }, [sqlLocaldbInstanceName]);
@@ -100,6 +85,18 @@ export function SettingsPanel() {
     }
   }, [sqlLocaldbAction, sqlLocaldbManaged, sqlLocaldbRuntimeReady]);
 
+  useEffect(() => {
+    if (!showSqlLocaldbSettingsCard && settingsTab === "sqllocaldb") {
+      setSettingsTab("overview");
+    }
+  }, [showSqlLocaldbSettingsCard, settingsTab]);
+
+  useEffect(() => {
+    if (!sqlLocaldbRuntimeReady && sqlLocaldbManaged) {
+      setSqlLocaldbAction("uninstall");
+    }
+  }, [sqlLocaldbRuntimeReady, sqlLocaldbManaged]);
+
   const onCreateSqlLocaldbInstance = async () => {
     const inst = sqlLocaldbCreateInstance.trim();
     if (!inst) {
@@ -112,6 +109,7 @@ export function SettingsPanel() {
       await sqlLocaldbCli("create", inst);
       await refreshInstances();
       setSqlLocaldbDeleteInstance(inst);
+      void recheckSqlLocaldbRuntime();
       toast.success("SqlLocalDB created instance.");
     } catch (error) {
       console.error(error);
@@ -133,6 +131,7 @@ export function SettingsPanel() {
       await sqlLocaldbCli("delete", inst);
       await refreshInstances();
       setSqlLocaldbDeleteInstance("");
+      void recheckSqlLocaldbRuntime();
       toast.success("SqlLocalDB deleted instance.");
     } catch (error) {
       console.error(error);
@@ -166,9 +165,6 @@ export function SettingsPanel() {
     setSqlLocaldbBusy(true);
     try {
       await uninstallAppManagedSqlLocaldb();
-      setSqlLocaldbManaged(false);
-      setSqlLocaldbVersion(null);
-      setSqlLocaldbInstanceName(null);
       toast.success("SqlLocalDB uninstalled.");
     } catch (error) {
       console.error(error);
@@ -181,59 +177,76 @@ export function SettingsPanel() {
   };
 
   return (
-    <Card className="rounded-2xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
-      <CardHeader className="pb-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-muted">
-            <Settings2 className="h-5 w-5 text-muted-foreground" />
-          </div>
-
-          <div>
-            <CardTitle className="text-lg leading-tight">Settings</CardTitle>
-            <CardDescription className="mt-1">
-              Review manifest details, appearance, and validate local service ports.
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        <ManifestSummaryCards settings={settings} loadingSettings={loadingSettings} />
-
-        {showSqlLocaldbSettingsCard && (
-          <SqlLocaldbSettingsCard
-            sqlLocaldbManaged={sqlLocaldbManaged}
-            sqlLocaldbRuntimeReady={sqlLocaldbRuntimeReady}
-            sqlLocaldbVersion={sqlLocaldbVersion}
-            sqlLocaldbInstanceName={sqlLocaldbInstanceName}
-            sqlLocaldbAction={sqlLocaldbAction}
-            setSqlLocaldbAction={setSqlLocaldbAction}
-            sqlLocaldbCreateInstance={sqlLocaldbCreateInstance}
-            setSqlLocaldbCreateInstance={setSqlLocaldbCreateInstance}
-            sqlLocaldbDeleteInstance={sqlLocaldbDeleteInstance}
-            setSqlLocaldbDeleteInstance={setSqlLocaldbDeleteInstance}
-            instanceOptions={instanceOptions}
-            sqlLocaldbBusy={sqlLocaldbBusy}
-            onCreateInstance={() => void onCreateSqlLocaldbInstance()}
-            onDeleteInstance={() => void onDeleteSqlLocaldbInstance()}
-            onUninstall={() => void onUninstallSqlLocaldb()}
-          />
-        )}
-
-        <AppearanceCard mounted={mounted} theme={theme} setTheme={setTheme} />
-
-        <PortValidationCard
-          httpPort={httpPort}
-          onHttpPortChange={(n) => {
-            setHttpPort(n);
-            setPortStatus("idle");
-          }}
-          portStatus={portStatus}
-          onValidate={() => void validatePort()}
+    <PanelShell
+      header={
+        <PageHeader
+          icon={Settings2}
+          title="Settings"
+          description="Manifest, paths, appearance, ports, and optional SqlLocalDB."
         />
+      }
+    >
+      <Tabs value={settingsTab} onValueChange={setSettingsTab} className="gap-3">
+          <TabsList className="h-auto min-h-8 w-full flex-wrap justify-start gap-0.5 bg-muted/50 p-1">
+            <TabsTrigger value="overview" className="px-2 py-1 text-xs">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="appearance" className="px-2 py-1 text-xs">
+              Appearance
+            </TabsTrigger>
+            <TabsTrigger value="network" className="px-2 py-1 text-xs">
+              Network
+            </TabsTrigger>
+            {showSqlLocaldbSettingsCard ? (
+              <TabsTrigger value="sqllocaldb" className="px-2 py-1 text-xs">
+                SqlLocalDB
+              </TabsTrigger>
+            ) : null}
+          </TabsList>
 
-        {settings && <PathsGrid settings={settings} />}
-      </CardContent>
-    </Card>
+          <TabsContent value="overview" className="mt-0 space-y-3">
+            <ManifestSummaryCards settings={settings} loadingSettings={loadingSettings} />
+            {settings ? <PathsGrid settings={settings} /> : null}
+          </TabsContent>
+
+          <TabsContent value="appearance" className="mt-0">
+            <AppearanceCard mounted={mounted} theme={theme} setTheme={setTheme} />
+          </TabsContent>
+
+          <TabsContent value="network" className="mt-0">
+            <PortValidationCard
+              httpPort={httpPort}
+              onHttpPortChange={(n) => {
+                setHttpPort(n);
+                setPortStatus("idle");
+              }}
+              portStatus={portStatus}
+              onValidate={() => void validatePort()}
+            />
+          </TabsContent>
+
+          {showSqlLocaldbSettingsCard ? (
+            <TabsContent value="sqllocaldb" className="mt-0">
+              <SqlLocaldbSettingsCard
+                sqlLocaldbManaged={sqlLocaldbManaged}
+                sqlLocaldbRuntimeReady={sqlLocaldbRuntimeReady}
+                sqlLocaldbVersion={sqlLocaldbVersion}
+                sqlLocaldbInstanceName={sqlLocaldbInstanceName}
+                sqlLocaldbAction={sqlLocaldbAction}
+                setSqlLocaldbAction={setSqlLocaldbAction}
+                sqlLocaldbCreateInstance={sqlLocaldbCreateInstance}
+                setSqlLocaldbCreateInstance={setSqlLocaldbCreateInstance}
+                sqlLocaldbDeleteInstance={sqlLocaldbDeleteInstance}
+                setSqlLocaldbDeleteInstance={setSqlLocaldbDeleteInstance}
+                instanceOptions={instanceOptions}
+                sqlLocaldbBusy={sqlLocaldbBusy}
+                onCreateInstance={() => void onCreateSqlLocaldbInstance()}
+                onDeleteInstance={() => void onDeleteSqlLocaldbInstance()}
+                onUninstall={() => void onUninstallSqlLocaldb()}
+              />
+            </TabsContent>
+          ) : null}
+      </Tabs>
+    </PanelShell>
   );
 }

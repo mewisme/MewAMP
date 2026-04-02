@@ -28,7 +28,7 @@ export function PathField({
             Browse
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">{hint}</p>
+        <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">{hint}</p>
       </CardContent>
     </Card>
   );

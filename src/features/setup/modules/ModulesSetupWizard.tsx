@@ -18,6 +18,7 @@ import {
   sqlLocaldbInstallerSupported,
   type SqlLocalDbManifestEntry,
 } from "@/lib/tauri-commands";
+import { refreshSqlLocaldbGlobalState } from "@/stores/sql-localdb";
 import { SQL_LOCALDB_INSTANCE_PATTERN, modulesSetupSteps } from "@/features/setup/constants";
 import { getSetupModulesForPlatform, orderedSelectedModules } from "@/features/setup/modules/registry";
 import { ModulesSetupHeader } from "@/features/setup/modules/ModulesSetupHeader";
@@ -181,6 +182,7 @@ export function ModulesSetupWizard({ onBack }: { onBack: () => void }) {
         }
       }
       setStep(4);
+      void refreshSqlLocaldbGlobalState();
       toast.success("Module installation completed.");
     } catch (error) {
       console.error(error);

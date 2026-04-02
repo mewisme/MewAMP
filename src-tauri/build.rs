@@ -1,8 +1,6 @@
 fn main() {
     let mut attrs = tauri_build::Attributes::new();
 
-    // Embed a Windows app manifest for the *build target* (not the host): UAC + Common Controls v6.
-    // `#[cfg(windows)]` would wrong when cross-compiling from macOS/Linux to Windows.
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
         let windows = tauri_build::WindowsAttributes::new().app_manifest(
             r#"<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">

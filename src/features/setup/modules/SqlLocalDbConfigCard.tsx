@@ -100,7 +100,7 @@ export function SqlLocalDbConfigCard({
               spellCheck={false}
               onChange={(e) => setModConfig({ ...modConfig, sqlLocaldbInstanceName: e.target.value })}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">
               Used with <code className="text-xs">sqllocaldb create &quot;name&quot;</code> after install. Only letters, digits,
               and underscores.
             </p>
@@ -114,7 +114,7 @@ export function SqlLocalDbConfigCard({
         <div className="flex items-start justify-between gap-4 rounded-xl border border-border/60 bg-muted/20 p-4">
           <div className="space-y-1">
             <div className="font-medium">Force reinstall MSI</div>
-            <p className="text-sm text-muted-foreground">
+            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
               Redownload and run the MSI even when the same version is already recorded for this app.
             </p>
           </div>

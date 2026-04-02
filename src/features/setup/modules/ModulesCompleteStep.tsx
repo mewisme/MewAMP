@@ -20,7 +20,7 @@ export function ModulesCompleteStep({
         </div>
         <div className="space-y-2">
           <h3 className="text-2xl font-semibold">Modules installed</h3>
-          <p className="max-w-xl text-sm text-muted-foreground">
+          <p className="max-w-xl line-clamp-2 text-sm leading-snug text-muted-foreground">
             Selected components finished installation. You can return to the dashboard or install additional modules
             later when new ones are available.
           </p>

@@ -1,6 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Globe, Database, FolderOpen, HardDrive, ScrollText, Settings2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { ChevronDown, Database, FolderOpen, Globe, HardDrive, ScrollText, Settings2 } from "lucide-react";
 
 export function QuickActionsCard({
   onOpenLocalhost,
@@ -18,105 +26,50 @@ export function QuickActionsCard({
   onOpenLogFolder: () => void;
 }) {
   return (
-    <Card className="border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
-      <CardHeader>
-        <CardTitle className="text-lg">Quick Actions</CardTitle>
-        <CardDescription>Open common web endpoints and local folders quickly.</CardDescription>
+    <Card className="rounded-xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Quick actions</CardTitle>
+        <CardDescription className="text-xs">Browser shortcuts and install folders.</CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-6">
-        <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-              <Globe className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold">Web</p>
-              <p className="text-xs text-muted-foreground">Open local services in your browser</p>
-            </div>
-          </div>
+      <CardContent className="flex flex-wrap items-center gap-2 pt-0">
+        <Button type="button" size="sm" onClick={onOpenLocalhost} className="gap-1.5">
+          <Globe className="size-3.5" />
+          Localhost
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={onOpenPhpMyAdmin} className="gap-1.5">
+          <Database className="size-3.5" />
+          phpMyAdmin
+        </Button>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <Button size="lg" className="h-14 justify-start rounded-xl px-4 text-left" onClick={onOpenLocalhost}>
-              <div className="flex items-center gap-3">
-                <Globe className="h-4 w-4 shrink-0" />
-                <div className="flex flex-col items-start">
-                  <span className="font-medium">Open Localhost</span>
-                  <span className="text-xs opacity-80">Main local web entry</span>
-                </div>
-              </div>
-            </Button>
-
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-14 justify-start rounded-xl px-4 text-left"
-              onClick={onOpenPhpMyAdmin}
-            >
-              <div className="flex items-center gap-3">
-                <Database className="h-4 w-4 shrink-0" />
-                <div className="flex flex-col items-start">
-                  <span className="font-medium">Open PhpMyAdmin</span>
-                  <span className="text-xs text-muted-foreground">Database admin panel</span>
-                </div>
-              </div>
-            </Button>
-          </div>
-        </section>
-
-        <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-              <FolderOpen className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold">Files</p>
-              <p className="text-xs text-muted-foreground">Open project and runtime directories</p>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <Button variant="outline" className="h-14 justify-start rounded-xl px-4 text-left" onClick={onOpenHtdocs}>
-              <div className="flex items-center gap-3">
-                <FolderOpen className="h-4 w-4 shrink-0" />
-                <div className="flex flex-col items-start">
-                  <span className="font-medium">Open htdocs</span>
-                  <span className="text-xs text-muted-foreground">Web root directory</span>
-                </div>
-              </div>
-            </Button>
-
-            <Button variant="outline" className="h-14 justify-start rounded-xl px-4 text-left" onClick={onOpenRuntime}>
-              <div className="flex items-center gap-3">
-                <HardDrive className="h-4 w-4 shrink-0" />
-                <div className="flex flex-col items-start">
-                  <span className="font-medium">Open Runtime</span>
-                  <span className="text-xs text-muted-foreground">Logs, temp, process data</span>
-                </div>
-              </div>
-            </Button>
-
-            <Button variant="outline" className="h-14 justify-start rounded-xl px-4 text-left" onClick={onOpenConfig}>
-              <div className="flex items-center gap-3">
-                <Settings2 className="h-4 w-4 shrink-0" />
-                <div className="flex flex-col items-start">
-                  <span className="font-medium">Open Config</span>
-                  <span className="text-xs text-muted-foreground">Service configuration files</span>
-                </div>
-              </div>
-            </Button>
-
-            <Button variant="outline" className="h-14 justify-start rounded-xl px-4 text-left" onClick={onOpenLogFolder}>
-              <div className="flex items-center gap-3">
-                <ScrollText className="h-4 w-4 shrink-0" />
-                <div className="flex flex-col items-start">
-                  <span className="font-medium">Open Log Folder</span>
-                  <span className="text-xs text-muted-foreground">App and service log files</span>
-                </div>
-              </div>
-            </Button>
-          </div>
-        </section>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            type="button"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1")}
+          >
+            <FolderOpen className="size-3.5" />
+            Folders
+            <ChevronDown className="size-3 opacity-70" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-52">
+            <DropdownMenuItem onClick={onOpenHtdocs}>
+              <FolderOpen className="size-4" />
+              htdocs
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onOpenRuntime}>
+              <HardDrive className="size-4" />
+              Runtime
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onOpenConfig}>
+              <Settings2 className="size-4" />
+              Config
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onOpenLogFolder}>
+              <ScrollText className="size-4" />
+              Log folder
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </CardContent>
     </Card>
   );
