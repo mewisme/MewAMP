@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   FileText,
   AppWindow,
@@ -7,25 +8,35 @@ import {
   Database,
   RefreshCw,
   Copy,
+  Trash2,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getLog } from "@/lib/tauri-commands";
+import { clearLogFile, getLog } from "@/lib/tauri-commands";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { toast } from "sonner";
+import { platform } from "@tauri-apps/plugin-os";
+import { useSqlLocaldbRuntimeInit } from "@/features/sql-localdb/use-sql-localdb-runtime";
 
-type LogKey = "app" | "installer" | "apache" | "mariadb";
+export type LogPanelTab = "app" | "installer" | "apache" | "mariadb" | "sqllocaldb";
+
+type LogKey = LogPanelTab;
 const AUTO_SCROLL_THRESHOLD_PX = 24;
 
 export function LogsPanel() {
+  const location = useLocation();
+  const osIsWindows = platform() === "windows";
+  const { sqlLocaldbRuntimeReady } = useSqlLocaldbRuntimeInit();
+  const showSqlLocaldbLogTab = osIsWindows && sqlLocaldbRuntimeReady;
   const [activeTab, setActiveTab] = useState<LogKey>("app");
   const [logs, setLogs] = useState<Record<LogKey, string>>({
     app: "",
     installer: "",
     apache: "",
     mariadb: "",
+    sqllocaldb: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -39,13 +50,17 @@ export function LogsPanel() {
     installer: true,
     apache: true,
     mariadb: true,
+    sqllocaldb: true,
   });
+
+  const sqllocaldbLogRef = useRef<HTMLPreElement | null>(null);
 
   const logRefs: Record<LogKey, React.RefObject<HTMLPreElement | null>> = {
     app: appLogRef,
     installer: installerLogRef,
     apache: apacheLogRef,
     mariadb: mariadbLogRef,
+    sqllocaldb: sqllocaldbLogRef,
   };
 
   const logMeta: Array<{
@@ -53,24 +68,52 @@ export function LogsPanel() {
     label: string;
     empty: string;
     icon: React.ElementType;
-  }> = useMemo(
-    () => [
+  }> = useMemo(() => {
+    const base: Array<{
+      key: LogKey;
+      label: string;
+      empty: string;
+      icon: React.ElementType;
+    }> = [
       { key: "app", label: "App", empty: "No app logs yet.", icon: AppWindow },
       { key: "installer", label: "Installer", empty: "No installer logs yet.", icon: Wrench },
       { key: "apache", label: "Apache", empty: "No Apache logs yet.", icon: Server },
       { key: "mariadb", label: "MariaDB", empty: "No MariaDB logs yet.", icon: Database },
-    ],
-    []
-  );
+    ];
+    if (showSqlLocaldbLogTab) {
+      base.push({
+        key: "sqllocaldb",
+        label: "SqlLocalDB",
+        empty: "No SqlLocalDB CLI logs yet. Use the Dashboard or Settings.",
+        icon: Server,
+      });
+    }
+    return base;
+  }, [showSqlLocaldbLogTab]);
 
-  const loadLogs = async () => {
+  useEffect(() => {
+    const tab = (location.state as { activeLogTab?: LogKey } | null)?.activeLogTab;
+    const allowSql = tab === "sqllocaldb" && showSqlLocaldbLogTab;
+    if (tab === "app" || tab === "installer" || tab === "apache" || tab === "mariadb" || allowSql) {
+      setActiveTab(tab);
+    }
+  }, [location.state, showSqlLocaldbLogTab]);
+
+  useEffect(() => {
+    if (activeTab === "sqllocaldb" && !showSqlLocaldbLogTab) {
+      setActiveTab("app");
+    }
+  }, [activeTab, showSqlLocaldbLogTab]);
+
+  const loadLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const [app, installer, apache, mariadb] = await Promise.all([
+      const [app, installer, apache, mariadb, sqllocaldb] = await Promise.all([
         getLog("app"),
         getLog("installer"),
         getLog("apache"),
         getLog("mariadb"),
+        showSqlLocaldbLogTab ? getLog("sqllocaldb") : Promise.resolve(""),
       ]);
 
       setLogs({
@@ -78,6 +121,7 @@ export function LogsPanel() {
         installer,
         apache,
         mariadb,
+        sqllocaldb,
       });
     } catch (error) {
       console.error(error);
@@ -85,13 +129,13 @@ export function LogsPanel() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showSqlLocaldbLogTab]);
 
   useEffect(() => {
-    loadLogs();
-    const id = setInterval(loadLogs, 1000);
+    void loadLogs();
+    const id = setInterval(() => void loadLogs(), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [loadLogs]);
 
   useEffect(() => {
     const ref = logRefs[activeTab]?.current;
@@ -117,6 +161,17 @@ export function LogsPanel() {
     }
   };
 
+  const clearLogForTab = async (key: LogKey, label: string) => {
+    try {
+      await clearLogFile(key);
+      setLogs((prev) => ({ ...prev, [key]: "" }));
+      toast.success(`${label} log cleared.`);
+    } catch (error) {
+      console.error(error);
+      toast.error(`Failed to clear ${label.toLowerCase()} log.`);
+    }
+  };
+
   return (
     <Card className="rounded-2xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
       <CardHeader className="pb-4">
@@ -129,7 +184,7 @@ export function LogsPanel() {
             <div>
               <CardTitle className="text-lg leading-tight">Logs</CardTitle>
               <CardDescription className="mt-1">
-                View live logs for the app, installer, Apache, and MariaDB.
+                View live logs for the app, installer, Apache, MariaDB, and SqlLocalDB CLI output.
               </CardDescription>
             </div>
           </div>
@@ -178,26 +233,42 @@ export function LogsPanel() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
+                      type="button"
                       variant="outline"
-                      size="sm"
+                      size="icon-sm"
                       className="rounded-xl"
                       onClick={loadLogs}
                       disabled={loading}
+                      title="Refresh"
+                      aria-label={`Refresh ${item.label} log`}
                     >
-                      <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                      Refresh
+                      <RefreshCw className={loading ? "animate-spin" : ""} />
                     </Button>
 
                     <Button
+                      type="button"
                       variant="outline"
-                      size="sm"
+                      size="icon-sm"
                       className="rounded-xl"
                       onClick={() => copyLog(text, item.label)}
+                      title="Copy log"
+                      aria-label={`Copy ${item.label} log to clipboard`}
                     >
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy Log
+                      <Copy />
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      className="rounded-xl text-destructive hover:text-destructive"
+                      onClick={() => void clearLogForTab(item.key, item.label)}
+                      title="Clear log"
+                      aria-label={`Clear ${item.label} log file`}
+                    >
+                      <Trash2 />
                     </Button>
                   </div>
                 </div>

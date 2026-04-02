@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WiX fragment: MSI uninstall for MewAMP.
+  1) Task-kill the app so files/LocalDB are not locked.
+  2) If app-managed SqlLocalDB artifacts exist (%APPDATA%\MewAMP\app\state\), run the generated
+     sqllocaldb_uninstall.cmd (same as NSIS installer-hooks / prior sql-localdb-uninstall.wxs).
+
+  No WiX extensions required (VBS custom actions only).
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <CustomAction Id="MewAMPCloseAppBeforeUninstall"
+                  Script="vbscript"
+                  Execute="immediate">
+      <![CDATA[
+        Set shell = CreateObject("WScript.Shell")
+        On Error Resume Next
+        shell.Run "cmd.exe /c taskkill /F /IM MewAMP.exe /T", 0, True
+      ]]>
+    </CustomAction>
+
+    <CustomAction Id="MewAMPSqlLocalDbHookUninstall"
+                  Script="vbscript"
+                  Execute="immediate">
+      <![CDATA[
+        Set shell = CreateObject("WScript.Shell")
+        appData = shell.ExpandEnvironmentStrings("%APPDATA%")
+        cmdPath = appData & "\MewAMP\app\state\sqllocaldb_uninstall.cmd"
+        jsonPath = appData & "\MewAMP\app\state\sql_localdb_ownership.json"
+
+        Set fso = CreateObject("Scripting.FileSystemObject")
+        On Error Resume Next
+        managed = False
+        If fso.FileExists(jsonPath) Then
+          Set txt = fso.OpenTextFile(jsonPath, 1, False)
+          json = txt.ReadAll
+          txt.Close
+          q = Chr(34)
+          If InStr(1, json, q & "installed_by_app" & q & ": true", vbTextCompare) > 0 _
+             Or InStr(1, json, q & "installed_by_app" & q & ":true", vbTextCompare) > 0 Then
+            managed = True
+          End If
+        End If
+        If managed And fso.FileExists(cmdPath) Then
+          exitCode = shell.Run("""" & cmdPath & """", 0, True)
+        End If
+        If fso.FileExists(cmdPath) Then fso.DeleteFile cmdPath, True
+        If fso.FileExists(jsonPath) Then fso.DeleteFile jsonPath, True
+      ]]>
+    </CustomAction>
+
+    <InstallExecuteSequence>
+      <Custom Action="MewAMPCloseAppBeforeUninstall" Before="RemoveFiles">
+        REMOVE="ALL"
+      </Custom>
+      <Custom Action="MewAMPSqlLocalDbHookUninstall" After="MewAMPCloseAppBeforeUninstall">
+        REMOVE="ALL"
+      </Custom>
+    </InstallExecuteSequence>
+  </Fragment>
+</Wix>

@@ -1,12 +1,41 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAtom } from "jotai";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { servicesAtom, type ServiceRuntimeState } from "@/stores/services";
-import { getHtdocsPath, getInstallState, getServiceStatus, openFolder, startManagedService, stopService, type InstallState } from "@/lib/tauri-commands";
+import { platform } from "@tauri-apps/plugin-os";
+import {
+  getHtdocsPath,
+  getInstallState,
+  getServiceStatus,
+  getSqlLocaldbInstanceStatus,
+  openFolder,
+  sqlLocaldbCli,
+  startManagedService,
+  stopService,
+  type InstallState,
+} from "@/lib/tauri-commands";
 import { useNavigate } from "react-router-dom";
+import { useSqlLocaldbInstanceOptions } from "@/features/sql-localdb/use-sql-localdb-instance-options";
+import { useSqlLocaldbRuntimeInit } from "@/features/sql-localdb/use-sql-localdb-runtime";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
 
@@ -21,14 +50,44 @@ import {
   Settings2,
   Activity,
   HardDrive,
-} from "lucide-react"
+  Info,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+
+function mapSqlLocaldbStatus(raw: string): ServiceRuntimeState {
+  switch (raw) {
+    case "running":
+    case "stopped":
+    case "starting":
+    case "stopping":
+    case "unknown":
+      return raw;
+    default:
+      return "unknown";
+  }
+}
 
 export function DashboardPanel() {
   const [services, setServices] = useAtom(servicesAtom);
   const [isInstalled, setIsInstalled] = useState<boolean | null>(null);
   const [installState, setInstallState] = useState<InstallState | null>(null);
+  const [sqlLocaldbInstance, setSqlLocaldbInstance] = useState("MewAMP");
+  const [sqlLocaldbBusy, setSqlLocaldbBusy] = useState(false);
+  const [sqlLocaldbInfoOpen, setSqlLocaldbInfoOpen] = useState(false);
+  const [sqlLocaldbInfoText, setSqlLocaldbInfoText] = useState("");
+  const [sqlLocaldbStatus, setSqlLocaldbStatus] = useState<ServiceRuntimeState>("unknown");
+  const sqlLocaldbBusyRef = useRef(false);
+
   const navigate = useNavigate();
+  const osIsWindows = platform() === "windows";
+  const { sqlLocaldbRuntimeReady } = useSqlLocaldbRuntimeInit();
+
+  const managedSqlName = installState?.sql_localdb?.instance_name?.trim();
+  const { instanceOptions, refreshInstances } = useSqlLocaldbInstanceOptions(
+    managedSqlName,
+    sqlLocaldbInstance,
+    osIsWindows && sqlLocaldbRuntimeReady,
+  );
 
   useEffect(() => {
     const loadInstallState = async () => {
@@ -42,17 +101,54 @@ export function DashboardPanel() {
       }
     };
 
-    loadInstallState();
+    void loadInstallState();
   }, []);
 
   useEffect(() => {
-    if (isInstalled !== true) {
+    sqlLocaldbBusyRef.current = sqlLocaldbBusy;
+  }, [sqlLocaldbBusy]);
+
+  useEffect(() => {
+    const name = installState?.sql_localdb?.instance_name?.trim();
+    if (name) setSqlLocaldbInstance(name);
+  }, [installState?.sql_localdb?.instance_name]);
+
+  useEffect(() => {
+    if (isInstalled !== true || !osIsWindows || !sqlLocaldbRuntimeReady) {
       return;
     }
 
     const tick = async () => {
+      const inst = sqlLocaldbInstance.trim();
+      if (!inst) {
+        setSqlLocaldbStatus("unknown");
+        return;
+      }
+      try {
+        const raw = await getSqlLocaldbInstanceStatus(inst);
+        setSqlLocaldbStatus((prev) => {
+          if (isTransitionState(prev)) return prev;
+          if (sqlLocaldbBusyRef.current) return prev;
+          return mapSqlLocaldbStatus(raw);
+        });
+      } catch (error) {
+        console.error(error);
+        setSqlLocaldbStatus((prev) => (isTransitionState(prev) ? prev : "unknown"));
+      }
+    };
+
+    void tick();
+    const id = setInterval(() => void tick(), 5000);
+    return () => clearInterval(id);
+  }, [isInstalled, osIsWindows, sqlLocaldbRuntimeReady, sqlLocaldbInstance]);
+
+  useEffect(() => {
+    if (isInstalled !== true) return;
+
+    const tick = async () => {
       const apache = await getServiceStatus("apache");
       const mariadb = await getServiceStatus("mariadb");
+
       setServices((prev) => ({
         apache: isTransitionState(prev.apache)
           ? prev.apache
@@ -62,7 +158,8 @@ export function DashboardPanel() {
           : (mariadb.status as ServiceRuntimeState),
       }));
     };
-    tick();
+
+    void tick();
     const id = setInterval(tick, 5000);
     return () => clearInterval(id);
   }, [isInstalled, setServices]);
@@ -180,6 +277,41 @@ export function DashboardPanel() {
     }
   };
 
+  const runSqlLocaldb = async (command: "start" | "stop" | "info") => {
+    const inst = sqlLocaldbInstance.trim();
+    if (command === "start") setSqlLocaldbStatus("starting");
+    if (command === "stop") setSqlLocaldbStatus("stopping");
+
+    setSqlLocaldbBusy(true);
+    try {
+      const out = await sqlLocaldbCli(command, inst);
+      await refreshInstances();
+      if (command === "info") {
+        setSqlLocaldbInfoText(out);
+        setSqlLocaldbInfoOpen(true);
+      } else {
+        const raw = await getSqlLocaldbInstanceStatus(inst);
+        setSqlLocaldbStatus(mapSqlLocaldbStatus(raw));
+        if (command === "start") {
+          toast.success("Started.");
+        } else {
+          toast.success("Stopped.");
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("SqlLocalDB command failed.");
+      try {
+        const raw = await getSqlLocaldbInstanceStatus(inst);
+        setSqlLocaldbStatus(mapSqlLocaldbStatus(raw));
+      } catch {
+        setSqlLocaldbStatus("unknown");
+      }
+    } finally {
+      setSqlLocaldbBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card className="border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
@@ -191,7 +323,6 @@ export function DashboardPanel() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Web */}
           <section className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
@@ -199,9 +330,7 @@ export function DashboardPanel() {
               </div>
               <div>
                 <p className="text-sm font-semibold">Web</p>
-                <p className="text-xs text-muted-foreground">
-                  Open local services in your browser
-                </p>
+                <p className="text-xs text-muted-foreground">Open local services in your browser</p>
               </div>
             </div>
 
@@ -230,16 +359,13 @@ export function DashboardPanel() {
                   <Database className="h-4 w-4 shrink-0" />
                   <div className="flex flex-col items-start">
                     <span className="font-medium">Open PhpMyAdmin</span>
-                    <span className="text-xs text-muted-foreground">
-                      Database admin panel
-                    </span>
+                    <span className="text-xs text-muted-foreground">Database admin panel</span>
                   </div>
                 </div>
               </Button>
             </div>
           </section>
 
-          {/* Files */}
           <section className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
@@ -247,9 +373,7 @@ export function DashboardPanel() {
               </div>
               <div>
                 <p className="text-sm font-semibold">Files</p>
-                <p className="text-xs text-muted-foreground">
-                  Open project and runtime directories
-                </p>
+                <p className="text-xs text-muted-foreground">Open project and runtime directories</p>
               </div>
             </div>
 
@@ -263,9 +387,7 @@ export function DashboardPanel() {
                   <FolderOpen className="h-4 w-4 shrink-0" />
                   <div className="flex flex-col items-start">
                     <span className="font-medium">Open htdocs</span>
-                    <span className="text-xs text-muted-foreground">
-                      Web root directory
-                    </span>
+                    <span className="text-xs text-muted-foreground">Web root directory</span>
                   </div>
                 </div>
               </Button>
@@ -279,9 +401,7 @@ export function DashboardPanel() {
                   <HardDrive className="h-4 w-4 shrink-0" />
                   <div className="flex flex-col items-start">
                     <span className="font-medium">Open Runtime</span>
-                    <span className="text-xs text-muted-foreground">
-                      Logs, temp, process data
-                    </span>
+                    <span className="text-xs text-muted-foreground">Logs, temp, process data</span>
                   </div>
                 </div>
               </Button>
@@ -295,9 +415,7 @@ export function DashboardPanel() {
                   <Settings2 className="h-4 w-4 shrink-0" />
                   <div className="flex flex-col items-start">
                     <span className="font-medium">Open Config</span>
-                    <span className="text-xs text-muted-foreground">
-                      Service configuration files
-                    </span>
+                    <span className="text-xs text-muted-foreground">Service configuration files</span>
                   </div>
                 </div>
               </Button>
@@ -346,32 +464,199 @@ export function DashboardPanel() {
             { label: "Open Config", onClick: openConfig, icon: Settings2 },
           ]}
         />
+
+        {osIsWindows && sqlLocaldbRuntimeReady && (
+          <SqlLocaldbServiceCard
+            instanceOptions={instanceOptions}
+            instance={sqlLocaldbInstance}
+            onInstanceChange={setSqlLocaldbInstance}
+            status={sqlLocaldbStatus}
+            busy={sqlLocaldbBusy}
+            onCommand={(cmd) => void runSqlLocaldb(cmd)}
+          />
+        )}
       </div>
+
+      <Dialog open={sqlLocaldbInfoOpen} onOpenChange={setSqlLocaldbInfoOpen}>
+        <DialogContent className="sm:max-w-lg" showCloseButton>
+          <DialogHeader>
+            <DialogTitle>SqlLocalDB info</DialogTitle>
+            <DialogDescription className="font-mono text-xs">
+              {sqlLocaldbInstance.trim()}
+            </DialogDescription>
+          </DialogHeader>
+          <pre className="max-h-[min(50vh,24rem)] overflow-auto rounded-lg border border-border/60 bg-muted/30 p-3 text-xs leading-relaxed whitespace-pre-wrap wrap-break-word">
+            {sqlLocaldbInfoText || "(no output)"}
+          </pre>
+          <DialogFooter showCloseButton />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-function getServiceMeta(type: "apache" | "database" | "php" | "phpmyadmin") {
+
+function SqlLocaldbServiceCard({
+  instanceOptions,
+  instance,
+  onInstanceChange,
+  status,
+  busy,
+  onCommand,
+}: {
+  instanceOptions: string[];
+  instance: string;
+  onInstanceChange: (v: string) => void;
+  status: ServiceRuntimeState;
+  busy: boolean;
+  onCommand: (cmd: "start" | "stop" | "info") => void;
+}) {
+  const meta = getServiceMeta("sqllocaldb");
+  const Icon = meta.icon;
+
+  const isRunning = status === "running";
+  const isStarting = status === "starting";
+  const isStopping = status === "stopping";
+  const isBusy = isStarting || isStopping || busy;
+
+  const commands: Array<{
+    cmd: "start" | "stop" | "info";
+    label: string;
+    icon: React.ElementType;
+    variant?: "outline";
+  }> = [
+      { cmd: "start", label: "Start", icon: Play },
+      { cmd: "stop", label: "Stop", icon: Square, variant: "outline" },
+      { cmd: "info", label: "Info", icon: Info, variant: "outline" },
+    ];
+
+  return (
+    <Card className="h-full rounded-2xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm transition-all hover:border-border">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-muted">
+              <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
+            </div>
+
+            <div className="min-h-[60px] min-w-0">
+              <CardTitle className="text-lg leading-tight">SqlLocalDB</CardTitle>
+              <CardDescription className="mt-1 line-clamp-2 leading-snug">
+                Manage LocalDB instances on Windows.
+              </CardDescription>
+            </div>
+          </div>
+
+          <Badge
+            variant="outline"
+            className={cn(
+              "shrink-0 rounded-full px-2.5 py-1 text-xs capitalize",
+              getStatusBadgeClass(status)
+            )}
+          >
+            {status}
+          </Badge>
+        </div>
+      </CardHeader>
+
+      <CardContent className="flex h-full flex-col gap-4">
+        <div className="space-y-1 rounded-xl border border-border/50 bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+          <p>
+            {isRunning
+              ? `${instance} is running and ready to use.`
+              : isStarting
+                ? `${instance} is starting...`
+                : isStopping
+                  ? `${instance} is stopping...`
+                  : status === "stopped"
+                    ? `${instance} is stopped.`
+                    : `Current status for ${instance} could not be determined.`}
+          </p>
+          <p className="text-xs opacity-90">CLI output is logged under Logs → SqlLocalDB.</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-sm font-medium" htmlFor="dashboard-sqllocaldb-instance">
+            Instance
+          </Label>
+          <Select
+            value={instance}
+            onValueChange={(v) => {
+              if (typeof v === "string" && v) onInstanceChange(v);
+            }}
+          >
+            <SelectTrigger
+              id="dashboard-sqllocaldb-instance"
+              className="h-11 w-full rounded-xl font-mono text-sm"
+              size="default"
+            >
+              <SelectValue placeholder="Select instance" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              {instanceOptions.map((name) => (
+                <SelectItem key={name} value={name} className="rounded-lg font-mono text-sm">
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="mt-auto grid grid-cols-3 gap-2">
+          {commands.map(({ cmd, label, icon: ActionIcon, variant }) => {
+            const empty = instance.trim() === "";
+            const disabled =
+              empty ||
+              (cmd === "start" && (isRunning || isBusy)) ||
+              (cmd === "stop" && (!isRunning || isBusy)) ||
+              (cmd === "info" && busy);
+
+            return (
+              <Button
+                key={cmd}
+                type="button"
+                variant={variant ?? "default"}
+                disabled={disabled}
+                className="h-11 rounded-xl"
+                onClick={() => onCommand(cmd)}
+              >
+                <ActionIcon className="mr-2 h-4 w-4 shrink-0" />
+                <span className="truncate">{label}</span>
+              </Button>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function getServiceMeta(type: "apache" | "database" | "php" | "phpmyadmin" | "sqllocaldb") {
   switch (type) {
     case "apache":
       return {
         icon: Server,
         iconWrapClass: "bg-muted",
-      }
+      };
     case "database":
       return {
         icon: Database,
         iconWrapClass: "bg-muted",
-      }
+      };
     case "php":
       return {
         icon: Activity,
         iconWrapClass: "bg-muted",
-      }
+      };
     case "phpmyadmin":
       return {
         icon: Globe,
         iconWrapClass: "bg-muted",
-      }
+      };
+    case "sqllocaldb":
+      return {
+        icon: Database,
+        iconWrapClass: "bg-muted",
+      };
   }
 }
 
@@ -379,20 +664,22 @@ function isTransitionState(status: ServiceRuntimeState): boolean {
   return status === "starting" || status === "stopping";
 }
 
-function getStatusBadgeClass(status: "running" | "stopped" | "unknown" | "available" | "starting" | "stopping") {
+function getStatusBadgeClass(
+  status: "running" | "stopped" | "unknown" | "available" | "starting" | "stopping"
+) {
   switch (status) {
     case "running":
-      return "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+      return "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
     case "starting":
-      return "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+      return "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400";
     case "stopping":
-      return "border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-400"
+      return "border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-400";
     case "stopped":
-      return "border-border bg-muted text-muted-foreground"
+      return "border-border bg-muted text-muted-foreground";
     case "unknown":
-      return "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+      return "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400";
     case "available":
-      return "border-sky-500/20 bg-sky-500/10 text-sky-600 dark:text-sky-400"
+      return "border-sky-500/20 bg-sky-500/10 text-sky-600 dark:text-sky-400";
   }
 }
 
@@ -405,39 +692,39 @@ function ServiceCard({
   onStop,
   onRestart,
 }: {
-  name: string
-  type: "apache" | "database"
-  status: "running" | "stopped" | "unknown" | "starting" | "stopping"
-  description: string
-  onStart: () => void
-  onStop: () => void
-  onRestart: () => void
+  name: string;
+  type: "apache" | "database";
+  status: "running" | "stopped" | "unknown" | "starting" | "stopping";
+  description: string;
+  onStart: () => void;
+  onStop: () => void;
+  onRestart: () => void;
 }) {
-  const meta = getServiceMeta(type)
-  const Icon = meta.icon
+  const meta = getServiceMeta(type);
+  const Icon = meta.icon;
 
-  const isRunning = status === "running"
-  const isStarting = status === "starting"
-  const isStopping = status === "stopping"
-  const isBusy = isStarting || isStopping
+  const isRunning = status === "running";
+  const isStarting = status === "starting";
+  const isStopping = status === "stopping";
+  const isBusy = isStarting || isStopping;
 
   return (
     <Card className="h-full rounded-2xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm transition-all hover:border-border">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             <div
               className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl",
                 meta.iconWrapClass
               )}
             >
               <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
             </div>
 
-            <div>
-              <CardTitle className="text-lg leading-none">{name}</CardTitle>
-              <CardDescription className="mt-1">
+            <div className="min-h-[60px] min-w-0 flex-1">
+              <CardTitle className="text-lg leading-tight">{name}</CardTitle>
+              <CardDescription className="mt-1 line-clamp-2 min-h-[40px] leading-snug">
                 {description}
               </CardDescription>
             </div>
@@ -445,7 +732,10 @@ function ServiceCard({
 
           <Badge
             variant="outline"
-            className={cn("rounded-full px-2.5 py-1 text-xs capitalize", getStatusBadgeClass(status))}
+            className={cn(
+              "shrink-0 rounded-full px-2.5 py-1 text-xs capitalize",
+              getStatusBadgeClass(status)
+            )}
           >
             {status}
           </Badge>
@@ -466,11 +756,7 @@ function ServiceCard({
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <Button
-            onClick={onStart}
-            disabled={isRunning || isBusy}
-            className="h-11 rounded-xl"
-          >
+          <Button onClick={onStart} disabled={isRunning || isBusy} className="h-11 rounded-xl">
             <Play className="mr-2 h-4 w-4" />
             Start
           </Button>
@@ -497,7 +783,7 @@ function ServiceCard({
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function SimpleServiceCard({
@@ -506,13 +792,13 @@ function SimpleServiceCard({
   description,
   actions,
 }: {
-  name: string
-  type: "php" | "phpmyadmin"
-  description: string
-  actions: Array<{ label: string; onClick: () => void; icon?: React.ElementType }>
+  name: string;
+  type: "php" | "phpmyadmin";
+  description: string;
+  actions: Array<{ label: string; onClick: () => void; icon?: React.ElementType }>;
 }) {
-  const meta = getServiceMeta(type)
-  const Icon = meta.icon
+  const meta = getServiceMeta(type);
+  const Icon = meta.icon;
 
   return (
     <Card className="h-full rounded-2xl border-border/60 bg-card/80 shadow-sm backdrop-blur-sm transition-all hover:border-border">
@@ -550,7 +836,7 @@ function SimpleServiceCard({
 
         <div className="mt-auto grid gap-2 sm:grid-cols-2">
           {actions.map((action) => {
-            const ActionIcon = action.icon
+            const ActionIcon = action.icon;
 
             return (
               <Button
@@ -562,10 +848,10 @@ function SimpleServiceCard({
                 {ActionIcon ? <ActionIcon className="mr-2 h-4 w-4 shrink-0" /> : null}
                 <span className="truncate">{action.label}</span>
               </Button>
-            )
+            );
           })}
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -7,3 +7,4 @@ pub mod logs;
 pub mod services;
 pub mod settings;
 pub mod splash;
+pub mod sql_localdb;

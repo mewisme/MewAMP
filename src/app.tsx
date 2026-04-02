@@ -1,19 +1,22 @@
 // import './app.css';
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ThemeProvider } from 'next-themes';
 import { invoke } from '@tauri-apps/api/core';
-import { useEffect, useState } from 'react';
-import { Toaster } from "@/components/ui/sonner"
-import Home from './pages/home';
-import { Layout } from './components/layout';
-import Empty from './pages/empty';
-import { Titlebar } from './features/titlebar';
-import SetupPage from './pages/setup';
-import DashboardPage from './pages/dashboard';
-import LogsPage from './pages/logs';
-import SettingsPage from './pages/settings';
-import DiagnosticsPage from './pages/diagnostics';
+import { ThemeProvider } from 'next-themes';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
+import { Layout } from '@/components/layout';
+import { Toaster } from '@/components/ui/sonner';
+import { Spinner } from '@/components/ui/spinner';
+import { Titlebar } from '@/features/titlebar';
+
+const Home = lazy(() => import('./pages/home'));
+const Empty = lazy(() => import('./pages/empty'));
+const SetupPage = lazy(() => import('./pages/setup'));
+const DashboardPage = lazy(() => import('./pages/dashboard'));
+const LogsPage = lazy(() => import('./pages/logs'));
+const SettingsPage = lazy(() => import('./pages/settings'));
+const DiagnosticsPage = lazy(() => import('./pages/diagnostics'));
 
 
 function App() {
@@ -71,15 +74,23 @@ function App() {
         <BrowserRouter>
           <Layout>
             <Toaster position="bottom-center" richColors offset={50} />
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/setup" element={<SetupPage />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/logs" element={<LogsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/diagnostics" element={<DiagnosticsPage />} />
-              <Route path="/empty" element={<Empty />} />
-            </Routes>
+            <Suspense
+              fallback={
+                <div className="flex h-full min-h-48 items-center justify-center">
+                  <Spinner className="size-8 text-muted-foreground" />
+                </div>
+              }
+            >
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/setup" element={<SetupPage />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/logs" element={<LogsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/diagnostics" element={<DiagnosticsPage />} />
+                <Route path="/empty" element={<Empty />} />
+              </Routes>
+            </Suspense>
           </Layout>
         </BrowserRouter>
       </>

@@ -25,6 +25,26 @@ pub struct InstalledComponents {
     pub phpmyadmin: Option<String>,
 }
 
+fn default_sql_localdb_instance_name() -> String {
+    "MewAMP".into()
+}
+
+/// Tracks SqlLocalDB installs performed by MewAMP so uninstallers can remove only app-owned MSI registrations.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SqlLocalDbInstallRecord {
+    pub installed_by_app: bool,
+    pub version: String,
+    pub manifest_key: String,
+    /// Windows Installer ProductCode including braces, e.g. `{GUID}` — required for reliable `msiexec /x`.
+    pub product_code: String,
+    pub install_timestamp: String,
+    pub install_log_path: Option<String>,
+    pub staged_msi_path: Option<String>,
+    /// Named LocalDB instance created via `sqllocaldb create` after MSI install.
+    #[serde(default = "default_sql_localdb_instance_name")]
+    pub instance_name: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppState {
     pub app_version: String,
@@ -37,6 +57,8 @@ pub struct AppState {
     pub config_root: String,
     #[serde(default)]
     pub installed_components: InstalledComponents,
+    #[serde(default)]
+    pub sql_localdb: Option<SqlLocalDbInstallRecord>,
     pub ports: Ports,
     pub health_status: HealthStatus,
     pub last_install_error: Option<String>,
@@ -54,6 +76,7 @@ impl Default for AppState {
             data_root: String::new(),
             config_root: String::new(),
             installed_components: InstalledComponents::default(),
+            sql_localdb: None,
             ports: Ports {
                 apache_http: 8080,
                 apache_https: 8443,
@@ -72,13 +95,21 @@ pub fn app_root_dir() -> Result<PathBuf, MewAmpError> {
     Ok(dir)
 }
 
-pub fn state_file_path() -> Result<PathBuf, MewAmpError> {
+pub fn state_dir() -> Result<PathBuf, MewAmpError> {
     let mut path = app_root_dir()?;
     path.push("app");
     path.push("state");
     fs::create_dir_all(&path)?;
-    path.push("state.json");
     Ok(path)
+}
+
+pub fn state_file_path() -> Result<PathBuf, MewAmpError> {
+    Ok(state_dir()?.join("state.json"))
+}
+
+/// JSON mirror of [`SqlLocalDbInstallRecord`] for NSIS/WiX hooks and external tooling.
+pub fn sql_localdb_ownership_json_path() -> Result<PathBuf, MewAmpError> {
+    Ok(state_dir()?.join("sql_localdb_ownership.json"))
 }
 
 pub fn load_state() -> Result<AppState, MewAmpError> {

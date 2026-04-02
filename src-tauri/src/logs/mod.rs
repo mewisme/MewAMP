@@ -15,6 +15,7 @@ fn log_path(kind: &str) -> Result<PathBuf, MewAmpError> {
         "installer" => "installer.log",
         "apache" => "apache.log",
         "mariadb" => "mariadb.log",
+        "sqllocaldb" => "sqllocaldb.log",
         _ => "app.log",
     };
     Ok(logs_dir()?.join(filename))

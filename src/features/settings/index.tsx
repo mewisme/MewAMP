@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { platform } from "@tauri-apps/plugin-os";
 import {
   CheckCircle2,
   Package,
@@ -12,6 +13,10 @@ import {
   Monitor,
   Palette,
   Check,
+  Trash2,
+  Database,
+  Wrench,
+  Plus,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -20,7 +25,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { checkPorts } from "@/lib/tauri-commands";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  checkPorts,
+  getInstallState,
+  sqlLocaldbCli,
+  uninstallAppManagedSqlLocaldb,
+} from "@/lib/tauri-commands";
+import { useSqlLocaldbInstanceOptions } from "@/features/sql-localdb/use-sql-localdb-instance-options";
+import { useSqlLocaldbRuntimeInit } from "@/features/sql-localdb/use-sql-localdb-runtime";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +52,7 @@ type Settings = {
 };
 
 type PortStatus = "idle" | "checking" | "available" | "in_use";
+type SqlLocalDbAction = "create" | "delete" | "uninstall";
 
 export function SettingsPanel() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -40,6 +60,25 @@ export function SettingsPanel() {
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [portStatus, setPortStatus] = useState<PortStatus>("idle");
   const [mounted, setMounted] = useState(false);
+
+  const [sqlLocaldbBusy, setSqlLocaldbBusy] = useState(false);
+  const [sqlLocaldbManaged, setSqlLocaldbManaged] = useState(false);
+  const [sqlLocaldbVersion, setSqlLocaldbVersion] = useState<string | null>(null);
+  const [sqlLocaldbInstanceName, setSqlLocaldbInstanceName] = useState<string | null>(null);
+
+  const [sqlLocaldbCreateInstance, setSqlLocaldbCreateInstance] = useState("MewAMP");
+  const [sqlLocaldbDeleteInstance, setSqlLocaldbDeleteInstance] = useState("");
+  const [sqlLocaldbAction, setSqlLocaldbAction] = useState<SqlLocalDbAction>("create");
+
+  const osIsWindows = platform() === "windows";
+  const { sqlLocaldbRuntimeReady, recheckSqlLocaldbRuntime } = useSqlLocaldbRuntimeInit();
+  const showSqlLocaldbSettingsCard = osIsWindows && (sqlLocaldbManaged || sqlLocaldbRuntimeReady);
+
+  const { instanceOptions, refreshInstances } = useSqlLocaldbInstanceOptions(
+    sqlLocaldbInstanceName ?? undefined,
+    sqlLocaldbDeleteInstance,
+    sqlLocaldbRuntimeReady,
+  );
 
   const { theme, setTheme } = useTheme();
 
@@ -64,6 +103,86 @@ export function SettingsPanel() {
     loadSettings();
   }, []);
 
+  useEffect(() => {
+    if (!osIsWindows) return;
+
+    const load = async () => {
+      try {
+        const st = await getInstallState();
+        const rec = st.sql_localdb;
+        setSqlLocaldbManaged(Boolean(rec?.installed_by_app));
+        setSqlLocaldbVersion(rec?.version ?? null);
+        setSqlLocaldbInstanceName(rec?.instance_name?.trim() || null);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    void load();
+  }, [osIsWindows]);
+
+  useEffect(() => {
+    const n = sqlLocaldbInstanceName?.trim();
+    if (n) setSqlLocaldbDeleteInstance(n);
+  }, [sqlLocaldbInstanceName]);
+
+  useEffect(() => {
+    if (!sqlLocaldbDeleteInstance && instanceOptions.length > 0) {
+      setSqlLocaldbDeleteInstance(instanceOptions[0]);
+    }
+  }, [instanceOptions, sqlLocaldbDeleteInstance]);
+
+  useEffect(() => {
+    if (sqlLocaldbAction === "delete" && !sqlLocaldbRuntimeReady) {
+      setSqlLocaldbAction("create");
+    }
+    if (sqlLocaldbAction === "uninstall" && !sqlLocaldbManaged) {
+      setSqlLocaldbAction(sqlLocaldbRuntimeReady ? "create" : "uninstall");
+    }
+  }, [sqlLocaldbAction, sqlLocaldbManaged, sqlLocaldbRuntimeReady]);
+
+  const onCreateSqlLocaldbInstance = async () => {
+    const inst = sqlLocaldbCreateInstance.trim();
+    if (!inst) {
+      toast.error("Enter an instance name.");
+      return;
+    }
+
+    setSqlLocaldbBusy(true);
+    try {
+      await sqlLocaldbCli("create", inst);
+      await refreshInstances();
+      setSqlLocaldbDeleteInstance(inst);
+      toast.success("SqlLocalDB created instance.");
+    } catch (error) {
+      console.error(error);
+      toast.error("SqlLocalDB command failed.");
+    } finally {
+      setSqlLocaldbBusy(false);
+    }
+  };
+
+  const onDeleteSqlLocaldbInstance = async () => {
+    const inst = sqlLocaldbDeleteInstance.trim();
+    if (!inst) {
+      toast.error("Select an instance to delete.");
+      return;
+    }
+
+    setSqlLocaldbBusy(true);
+    try {
+      await sqlLocaldbCli("delete", inst);
+      await refreshInstances();
+      setSqlLocaldbDeleteInstance("");
+      toast.success("SqlLocalDB deleted instance.");
+    } catch (error) {
+      console.error(error);
+      toast.error("SqlLocalDB command failed.");
+    } finally {
+      setSqlLocaldbBusy(false);
+    }
+  };
+
   const validatePort = async () => {
     setPortStatus("checking");
     try {
@@ -82,6 +201,24 @@ export function SettingsPanel() {
       setPortStatus("idle");
       toast.error("Failed to validate port.");
     }
+  };
+
+  const onUninstallSqlLocaldb = async () => {
+    setSqlLocaldbBusy(true);
+    try {
+      await uninstallAppManagedSqlLocaldb();
+      setSqlLocaldbManaged(false);
+      setSqlLocaldbVersion(null);
+      setSqlLocaldbInstanceName(null);
+      toast.success("SqlLocalDB uninstalled.");
+    } catch (error) {
+      console.error(error);
+      toast.error("Could not uninstall SqlLocalDB.");
+    } finally {
+      setSqlLocaldbBusy(false);
+    }
+
+    void recheckSqlLocaldbRuntime();
   };
 
   return (
@@ -115,6 +252,233 @@ export function SettingsPanel() {
             value={loadingSettings ? "Loading..." : settings?.selected_manifest_version || "Not available"}
           />
         </div>
+
+        {showSqlLocaldbSettingsCard && (
+          <Card className="rounded-2xl border-border/60 shadow-none">
+            <CardContent className="space-y-4 p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted">
+                    <Database className="h-4 w-4 text-muted-foreground" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium">SqlLocalDB</div>
+                    <p className="text-sm text-muted-foreground">
+                      Manage the optional Microsoft SQL Express LocalDB runtime and its local instances.
+                    </p>
+                  </div>
+                </div>
+
+                <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
+                  Windows only
+                </Badge>
+              </div>
+
+              <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                {sqlLocaldbManaged ? (
+                  <>
+                    Managed install detected
+                    {sqlLocaldbVersion ? (
+                      <>
+                        {" "}— version <span className="font-mono text-foreground">{sqlLocaldbVersion}</span>
+                      </>
+                    ) : null}
+                    {sqlLocaldbInstanceName ? (
+                      <>
+                        {", "}instance <span className="font-mono text-foreground">{sqlLocaldbInstanceName}</span>
+                      </>
+                    ) : null}
+                    .
+                  </>
+                ) : sqlLocaldbRuntimeReady ? (
+                  "SqlLocalDB runtime is available on this system, but no app-managed install record was found."
+                ) : (
+                  "No app-managed SqlLocalDB install is currently recorded."
+                )}
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-3">
+                {sqlLocaldbRuntimeReady && (
+                  <ActionOption
+                    icon={Plus}
+                    label="Create Instance"
+                    active={sqlLocaldbAction === "create"}
+                    onClick={() => setSqlLocaldbAction("create")}
+                  />
+                )}
+
+                {sqlLocaldbRuntimeReady && (
+                  <ActionOption
+                    icon={Wrench}
+                    label="Delete Instance"
+                    active={sqlLocaldbAction === "delete"}
+                    onClick={() => setSqlLocaldbAction("delete")}
+                  />
+                )}
+
+                {sqlLocaldbManaged && (
+                  <ActionOption
+                    icon={Trash2}
+                    label="Uninstall"
+                    active={sqlLocaldbAction === "uninstall"}
+                    onClick={() => setSqlLocaldbAction("uninstall")}
+                    destructive
+                  />
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-border/60 bg-background/40 p-5">
+                {sqlLocaldbAction === "create" && sqlLocaldbRuntimeReady && (
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <div className="font-medium">Create instance</div>
+                      <p className="text-sm text-muted-foreground">
+                        Enter a new LocalDB instance name to create.
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                      CLI output is written to <strong>Logs → SqlLocalDB</strong>.
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="settings-sqllocaldb-create-instance">Instance name</Label>
+                      <Input
+                        id="settings-sqllocaldb-create-instance"
+                        value={sqlLocaldbCreateInstance}
+                        onChange={(e) => setSqlLocaldbCreateInstance(e.target.value)}
+                        placeholder="MewAMP"
+                        className="h-11 rounded-xl font-mono text-sm"
+                      />
+                    </div>
+
+                    <Button
+                      type="button"
+                      className="h-11 rounded-xl"
+                      disabled={sqlLocaldbBusy || !sqlLocaldbCreateInstance.trim()}
+                      onClick={() => void onCreateSqlLocaldbInstance()}
+                    >
+                      {sqlLocaldbBusy ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Working...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create Instance
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {sqlLocaldbAction === "delete" && sqlLocaldbRuntimeReady && (
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <div className="font-medium">Delete instance</div>
+                      <p className="text-sm text-muted-foreground">
+                        Select an existing LocalDB instance to remove.
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                      CLI output is written to <strong>Logs → SqlLocalDB</strong>.
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="settings-sqllocaldb-delete-instance">Existing instance</Label>
+                      <Select
+                        value={sqlLocaldbDeleteInstance}
+                        onValueChange={(v) => {
+                          if (typeof v === "string") setSqlLocaldbDeleteInstance(v);
+                        }}
+                      >
+                        <SelectTrigger
+                          id="settings-sqllocaldb-delete-instance"
+                          className="h-11 w-full rounded-xl font-mono text-sm"
+                          size="default"
+                        >
+                          <SelectValue placeholder="Select instance" />
+                        </SelectTrigger>
+
+                        <SelectContent className="rounded-xl">
+                          {instanceOptions.map((name) => (
+                            <SelectItem key={name} value={name} className="rounded-lg font-mono text-sm">
+                              {name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      className="h-11 rounded-xl"
+                      disabled={sqlLocaldbBusy || !sqlLocaldbDeleteInstance.trim()}
+                      onClick={() => void onDeleteSqlLocaldbInstance()}
+                    >
+                      {sqlLocaldbBusy ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Working...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Instance
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {sqlLocaldbAction === "uninstall" && sqlLocaldbManaged && (
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <div className="font-medium">Uninstall SqlLocalDB</div>
+                      <p className="text-sm text-muted-foreground">
+                        Remove SqlLocalDB only when it was installed by MewAMP.
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                      {sqlLocaldbManaged
+                        ? "This SqlLocalDB install is tracked by MewAMP and can be removed safely here."
+                        : "This system does not currently have an app-managed SqlLocalDB install."}
+                    </div>
+
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <ManagedStateBadge managed={sqlLocaldbManaged} />
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-xl text-destructive hover:text-destructive"
+                        disabled={sqlLocaldbBusy || !sqlLocaldbManaged}
+                        onClick={() => void onUninstallSqlLocaldb()}
+                      >
+                        {sqlLocaldbBusy ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Removing...
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Uninstall SqlLocalDB
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="rounded-2xl border-border/60 shadow-none">
           <CardContent className="space-y-4 p-5">
@@ -277,9 +641,7 @@ function ThemeOption({
       onClick={onClick}
       className={cn(
         "h-auto min-h-12 justify-between rounded-xl px-4 py-3",
-        active
-          ? "border-primary/30 bg-primary/10 text-foreground"
-          : "text-muted-foreground"
+        active ? "border-primary/30 bg-primary/10 text-foreground" : "text-muted-foreground"
       )}
     >
       <div className="flex items-center gap-2">
@@ -294,6 +656,57 @@ function ThemeOption({
         </div>
       ) : null}
     </Button>
+  );
+}
+
+function ActionOption({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+  destructive = false,
+}: {
+  icon: React.ElementType;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={onClick}
+      className={cn(
+        "h-11 justify-start rounded-xl px-4",
+        active && !destructive && "border-primary/30 bg-primary/10 text-foreground",
+        active && destructive && "border-destructive/30 bg-destructive/10 text-destructive",
+        !active && destructive && "text-destructive hover:text-destructive"
+      )}
+    >
+      <Icon className="mr-2 h-4 w-4 shrink-0" />
+      <span>{label}</span>
+    </Button>
+  );
+}
+
+function ManagedStateBadge({ managed }: { managed: boolean }) {
+  if (managed) {
+    return (
+      <Badge
+        variant="outline"
+        className="rounded-full border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-600 dark:text-emerald-400"
+      >
+        <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+        Managed by MewAMP
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge variant="outline" className="rounded-full px-3 py-1 text-xs text-muted-foreground">
+      Not managed by app
+    </Badge>
   );
 }
 

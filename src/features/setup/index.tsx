@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAtom } from "jotai";
+import { platform } from "@tauri-apps/plugin-os";
 import { setupConfigAtom, setupInstallingAtom, setupStepAtom } from "@/stores/setup";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,8 +10,22 @@ import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { open } from "@tauri-apps/plugin-dialog";
-import { clearLogFile, getLog, startInstall } from "@/lib/tauri-commands";
+import {
+  clearLogFile,
+  getLog,
+  getSqlLocalDbManifestEntries,
+  sqlLocaldbInstallerSupported,
+  startInstall,
+  type SqlLocalDbManifestEntry,
+} from "@/lib/tauri-commands";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { toast } from "sonner";
 import {
@@ -23,6 +38,7 @@ import {
   Loader2,
   Package,
   Rocket,
+  Server,
   Settings2,
   Shield,
   Wrench,
@@ -30,6 +46,9 @@ import {
 import { cn } from "@/lib/utils";
 
 const steps = ["Welcome", "Paths", "Ports", "Components", "Manifest", "Install", "Complete"];
+
+/** Matches backend: letters, digits, underscores only */
+const SQL_LOCALDB_INSTANCE_PATTERN = /^[a-zA-Z0-9_]+$/;
 
 const DEFAULT_SETUP_CONFIG = {
   runtimeRoot: "",
@@ -39,6 +58,9 @@ const DEFAULT_SETUP_CONFIG = {
   mariadbPort: 3306,
   installPhpmyadmin: true,
   forceReinstall: false,
+  installSqlLocaldb: false,
+  sqlLocaldbVersion: "2022",
+  sqlLocaldbInstanceName: "MewAMP",
 };
 
 export function SetupWizard() {
@@ -47,6 +69,69 @@ export function SetupWizard() {
   const [installing, setInstalling] = useAtom(setupInstallingAtom);
   const [installerLog, setInstallerLog] = useState("");
   const installerLogRef = useRef<HTMLPreElement | null>(null);
+  const [sqlLocaldbEntries, setSqlLocaldbEntries] = useState<SqlLocalDbManifestEntry[]>([]);
+  const [sqlLocaldbManifestError, setSqlLocaldbManifestError] = useState<string | null>(null);
+  const [sqlLocaldbEntriesLoading, setSqlLocaldbEntriesLoading] = useState(false);
+
+  const osIsWindows = platform() === "windows";
+
+  useEffect(() => {
+    if (!osIsWindows) {
+      setConfig((c) =>
+        c.installSqlLocaldb
+          ? { ...c, installSqlLocaldb: false, sqlLocaldbVersion: "2022", sqlLocaldbInstanceName: "MewAMP" }
+          : c,
+      );
+    }
+  }, [osIsWindows, setConfig]);
+
+  useEffect(() => {
+    if (step !== 3 || !osIsWindows) return;
+
+    let cancelled = false;
+
+    const load = async () => {
+      const backendOk = await sqlLocaldbInstallerSupported().catch(() => false);
+      if (!backendOk || cancelled) return;
+
+      setSqlLocaldbEntriesLoading(true);
+      setSqlLocaldbManifestError(null);
+      try {
+        const entries = await getSqlLocalDbManifestEntries();
+        if (cancelled) return;
+        if (entries.length === 0) {
+          setSqlLocaldbManifestError("The manifest does not list any SqlLocalDB packages for Windows.");
+          setSqlLocaldbEntries([]);
+          return;
+        }
+        setSqlLocaldbEntries(entries);
+        setConfig((c) => {
+          const versions = new Set(entries.map((e) => e.version));
+          const nextVersion = versions.has(c.sqlLocaldbVersion)
+            ? c.sqlLocaldbVersion
+            : entries.find((e) => e.version === "2022")?.version ?? entries[0].version;
+          return { ...c, sqlLocaldbVersion: nextVersion };
+        });
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Could not load SqlLocalDB versions from the manifest. Check your network and try again.";
+          setSqlLocaldbManifestError(message);
+          setSqlLocaldbEntries([]);
+        }
+      } finally {
+        if (!cancelled) setSqlLocaldbEntriesLoading(false);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [step, osIsWindows, setConfig]);
 
   useEffect(() => {
     if (step !== 5) return;
@@ -79,7 +164,21 @@ export function SetupWizard() {
   const onInstall = async () => {
     setInstalling(true);
     try {
-      await startInstall(config);
+      const payload =
+        osIsWindows && (await sqlLocaldbInstallerSupported().catch(() => false))
+          ? config
+          : { ...config, installSqlLocaldb: false };
+      const inst = payload.sqlLocaldbInstanceName.trim();
+      if (
+        payload.installSqlLocaldb &&
+        (!inst || !SQL_LOCALDB_INSTANCE_PATTERN.test(inst))
+      ) {
+        toast.error(
+          "SqlLocalDB instance name must be non-empty and use only letters, numbers, and underscores.",
+        );
+        return;
+      }
+      await startInstall(payload);
       setStep(6);
       toast.success("Runtime installation completed.");
     } catch (error) {
@@ -373,6 +472,116 @@ export function SetupWizard() {
               />
             </div>
 
+            {osIsWindows && (
+              <Card className="rounded-2xl border-border/60 shadow-none">
+                <CardContent className="space-y-4 p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
+                        <Server className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <div className="font-medium">Microsoft SQL Express LocalDB</div>
+                        <p className="text-sm text-muted-foreground">
+                          Optional MSI from the app manifest. Uses silent install and appears in the live installer log
+                          with a <span className="font-mono text-xs">[SqlLocalDB]</span> prefix (including MSI log tail).
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="secondary">Windows only</Badge>
+                  </div>
+
+                  {sqlLocaldbManifestError && (
+                    <Alert variant="destructive" className="rounded-2xl">
+                      <AlertTitle>SqlLocalDB manifest</AlertTitle>
+                      <AlertDescription>{sqlLocaldbManifestError}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {sqlLocaldbEntriesLoading && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading SqlLocalDB versions from the manifest…
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-4 rounded-xl border border-border/60 bg-muted/20 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="text-sm font-medium">Install SqlLocalDB</div>
+                      <Switch
+                        checked={config.installSqlLocaldb}
+                        disabled={sqlLocaldbEntries.length === 0 || !!sqlLocaldbManifestError}
+                        onCheckedChange={(checked) =>
+                          setConfig({
+                            ...config,
+                            installSqlLocaldb: checked,
+                            sqlLocaldbVersion: checked
+                              ? config.sqlLocaldbVersion || "2022"
+                              : config.sqlLocaldbVersion,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground">LocalDB release year</Label>
+                      <Select
+                        value={config.sqlLocaldbVersion}
+                        onValueChange={(v) => {
+                          if (typeof v === "string" && v) {
+                            setConfig({ ...config, sqlLocaldbVersion: v });
+                          }
+                        }}
+                        disabled={!config.installSqlLocaldb || sqlLocaldbEntries.length === 0}
+                      >
+                        <SelectTrigger className="w-full rounded-xl" size="default">
+                          <SelectValue placeholder="Select SqlLocalDB year" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          {sqlLocaldbEntries.map((e) => (
+                            <SelectItem key={e.manifestKey} value={e.version} className="rounded-lg">
+                              <span className="font-medium">{e.version}</span>
+                              {e.installNotes ? (
+                                <span className="text-muted-foreground"> — {e.installNotes}</span>
+                              ) : null}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground" htmlFor="sqllocaldb-instance">
+                        Instance name
+                      </Label>
+                      <Input
+                        id="sqllocaldb-instance"
+                        className="rounded-xl font-mono text-sm"
+                        value={config.sqlLocaldbInstanceName}
+                        disabled={!config.installSqlLocaldb}
+                        placeholder="MewAMP"
+                        autoComplete="off"
+                        spellCheck={false}
+                        onChange={(e) =>
+                          setConfig({ ...config, sqlLocaldbInstanceName: e.target.value })
+                        }
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Used with{" "}
+                        <code className="text-xs">sqllocaldb create &quot;name&quot;</code> after install. Only letters,
+                        digits, and underscores.
+                      </p>
+                      {config.installSqlLocaldb &&
+                        config.sqlLocaldbInstanceName.trim() !== "" &&
+                        !SQL_LOCALDB_INSTANCE_PATTERN.test(config.sqlLocaldbInstanceName.trim()) && (
+                          <p className="text-xs text-destructive">Invalid instance name.</p>
+                        )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="rounded-2xl border-border/60 shadow-none">
               <CardContent className="flex items-start justify-between gap-4 p-5">
                 <div className="space-y-1">
@@ -483,6 +692,11 @@ export function SetupWizard() {
                 {config.installPhpmyadmin && (
                   <Badge variant="outline" className="rounded-full px-3 py-1">
                     phpMyAdmin
+                  </Badge>
+                )}
+                {osIsWindows && config.installSqlLocaldb && (
+                  <Badge variant="outline" className="rounded-full px-3 py-1">
+                    SqlLocalDB {config.sqlLocaldbVersion} ({config.sqlLocaldbInstanceName.trim() || "MewAMP"})
                   </Badge>
                 )}
               </div>

@@ -55,11 +55,21 @@
     "resources": [
       "resources/manifest.json"
     ],
-    "createUpdaterArtifacts": true
+    "createUpdaterArtifacts": true,
+    "windows": {
+      "nsis": {
+        "installerHooks": "./windows/installer-hooks.nsh"
+      },
+      "wix": {
+        "fragmentPaths": [
+          "./windows/terminate-app-on-uninstall.wxs"
+        ]
+      }
+    }
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM4NjIzRDY4RkZGNDZFRQpSV1R1UnYrUDFpT0dBNWpIMXpEaEswbUVkMkY4aW9nendCR1hQYktnNHBaK0tlaXk1QzN1dkpZMwo=",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNGQzNGNjUxRTkzMzlENUYKUldSZm5UUHBVZmJEUDY5RTNFQ1lmNzF2TnVjWE1lMjRDWHRoUVMzdVhSZ0xQS2RRQnFCSjU2VWIK",
       "endpoints": [
         "https://github.com/mewisme/MewAMP/releases/latest/download/latest.json"
       ]

@@ -11,4 +11,7 @@ export const setupConfigAtom = atom<InstallConfig>({
   mariadbPort: 3306,
   installPhpmyadmin: true,
   forceReinstall: false,
+  installSqlLocaldb: false,
+  sqlLocaldbVersion: "2022",
+  sqlLocaldbInstanceName: "MewAMP",
 });

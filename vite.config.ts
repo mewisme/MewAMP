@@ -35,4 +35,28 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) {
+            return;
+          }
+          if (id.includes("recharts")) {
+            return "recharts";
+          }
+          if (id.includes("react-router")) {
+            return "react-router";
+          }
+          if (
+            id.includes("node_modules/react-dom") ||
+            id.includes("node_modules/react/")
+          ) {
+            return "react-core";
+          }
+        },
+      },
+    },
+  },
 }));

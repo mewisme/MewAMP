@@ -24,6 +24,15 @@ use crate::{
 
 pub mod config_gen;
 pub mod database;
+pub mod sql_localdb;
+
+fn default_sqllocaldb_version_for_config() -> String {
+    sql_localdb::default_sqllocaldb_version()
+}
+
+fn default_sqllocaldb_instance_name_for_config() -> String {
+    sql_localdb::default_sql_localdb_instance_name()
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstallConfig {
@@ -35,6 +44,15 @@ pub struct InstallConfig {
     pub install_phpmyadmin: bool,
     #[serde(default)]
     pub force_reinstall: bool,
+    /// Windows-only optional component; ignored on other platforms.
+    #[serde(default)]
+    pub install_sqllocaldb: bool,
+    /// Manifest `version` field for the selected SqlLocalDB package (default `2022`).
+    #[serde(default = "default_sqllocaldb_version_for_config")]
+    pub sqllocaldb_version: String,
+    /// LocalDB instance name: letters, digits, underscore only (default `MewAMP`).
+    #[serde(default = "default_sqllocaldb_instance_name_for_config")]
+    pub sql_localdb_instance_name: String,
 }
 
 fn component_dir(base: &Path, name: &str) -> PathBuf {
@@ -179,6 +197,14 @@ pub async fn run_install(app: &tauri::AppHandle, config: InstallConfig) -> Resul
         state.ports.apache_https = config.apache_https_port;
         state.ports.mariadb = config.mariadb_port;
         save_state(&state)?;
+        sql_localdb::install_optional_sql_localdb(
+            app,
+            &config,
+            platform,
+            &cache_downloads,
+            config.force_reinstall,
+        )
+        .await?;
         return Ok(());
     }
 
@@ -365,6 +391,14 @@ pub async fn run_install(app: &tauri::AppHandle, config: InstallConfig) -> Resul
         None
     };
     save_state(&state)?;
+    sql_localdb::install_optional_sql_localdb(
+        app,
+        &config,
+        platform,
+        &cache_downloads,
+        config.force_reinstall,
+    )
+    .await?;
     ensure_runtime_processes_stopped().await?;
     let _ = append_log(
         "installer",

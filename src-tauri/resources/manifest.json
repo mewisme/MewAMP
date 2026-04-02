@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "manifestVersion": "2026.04.01",
+  "manifestVersion": "2026.04.02",
   "channel": "stable",
   "minAppVersion": "0.1.0",
   "packages": {
@@ -36,6 +36,38 @@
         "fallbackUrls": [],
         "sha256": "31c95fe5c00e0f899b5d31ac6fff506cf8061f2f746e9d7084c395f47451946e",
         "installNotes": "phpMyAdmin all-languages package"
+      },
+      "sqllocaldb2022": {
+        "version": "2022",
+        "packageType": "msi",
+        "primaryUrl": "https://download.microsoft.com/download/3/8/d/38de7036-2433-4207-8eae-06e247e17b25/SqlLocalDB.msi",
+        "fallbackUrls": [],
+        "sha256": "224D483992EF60368DAC70CEA174DCFAF43A3CA06ADA331C67DC6119A26490F6",
+        "installNotes": "Microsoft SQL Server 2022 Express LocalDB (sqllocaldb.msi)"
+      },
+      "sqllocaldb2019": {
+        "version": "2019",
+        "packageType": "msi",
+        "primaryUrl": "https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi",
+        "fallbackUrls": [],
+        "sha256": "80702F2B2732DE041FE34EA6477EA556EEB5D73EE44CE4A4301DE719455345E0",
+        "installNotes": "Microsoft SQL Server 2019 Express LocalDB (sqllocaldb.msi)"
+      },
+      "sqllocaldb2017": {
+        "version": "2017",
+        "packageType": "msi",
+        "primaryUrl": "https://download.microsoft.com/download/E/F/2/EF23C21D-7860-4F05-88CE-39AA114B014B/SqlLocalDB.msi",
+        "fallbackUrls": [],
+        "sha256": "1F8ECC7DCB4691C72D9F0FA29B05AC14C472944409C97C1BA428B67EC4FCCFF9",
+        "installNotes": "Microsoft SQL Server 2017 Express LocalDB (sqllocaldb.msi)"
+      },
+      "sqllocaldb2016": {
+        "version": "2016",
+        "packageType": "msi",
+        "primaryUrl": "https://download.microsoft.com/download/4/1/A/41AD6EDE-9794-44E3-B3D5-A1AF62CD7A6F/sql16_sp2_dlc/en-us/SqlLocalDB.msi",
+        "fallbackUrls": [],
+        "sha256": "7152F34EDBEDF177D05136074939F7188BB49147DE0EBBD829D1A5C85C53D6D4",
+        "installNotes": "Microsoft SQL Server 2016 SP2 Express LocalDB (sqllocaldb.msi)"
       }
     }
   }

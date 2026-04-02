@@ -26,6 +26,7 @@ pub fn get_install_state() -> Result<AppState, ErrorPayload> {
 
 #[tauri::command]
 pub fn reset_install_state() -> Result<(), ErrorPayload> {
+    let _ = crate::installer::sql_localdb::clear_persisted_sql_localdb_artifacts();
     let state = AppState::default();
     save_state(&state).map_err(Into::into)
 }
