@@ -21,7 +21,7 @@ export function toInstallPayload(config: CoreSetupConfig): InstallConfig {
   return {
     ...config,
     installSqlLocaldb: false,
-    sqlLocaldbVersion: "2022",
+    sqlLocaldbVersion: "2025",
     sqlLocaldbInstanceName: "MewAMP",
   };
 }

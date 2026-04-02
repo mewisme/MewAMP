@@ -23,6 +23,8 @@ pub struct PlatformPackages {
     pub mariadb: PackageDefinition,
     pub phpmyadmin: PackageDefinition,
     #[serde(default)]
+    pub sqllocaldb2025: Option<PackageDefinition>,
+    #[serde(default)]
     pub sqllocaldb2022: Option<PackageDefinition>,
     #[serde(default)]
     pub sqllocaldb2019: Option<PackageDefinition>,
@@ -35,6 +37,10 @@ pub struct PlatformPackages {
 impl PlatformPackages {
     pub fn sql_localdb_entries(&self) -> Vec<SqlLocalDbManifestPackage> {
         let mut entries: Vec<SqlLocalDbManifestPackage> = [
+            (
+                "sqllocaldb2025",
+                self.sqllocaldb2025.as_ref(),
+            ),
             (
                 "sqllocaldb2022",
                 self.sqllocaldb2022.as_ref(),

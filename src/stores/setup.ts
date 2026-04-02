@@ -18,7 +18,7 @@ export type SqlLocalDbModuleConfig = {
 };
 
 export const sqlLocaldbModuleConfigAtom = atom<SqlLocalDbModuleConfig>({
-  sqlLocaldbVersion: "2022",
+  sqlLocaldbVersion: "2025",
   sqlLocaldbInstanceName: "MewAMP",
   forceReinstall: false,
 });

@@ -78,7 +78,7 @@ export function ModulesSetupWizard({ onBack }: { onBack: () => void }) {
           const years = new Set(entries.map((e) => e.releaseYear));
           const nextVersion = years.has(c.sqlLocaldbVersion)
             ? c.sqlLocaldbVersion
-            : entries.find((e) => e.releaseYear === "2022")?.releaseYear ?? entries[0].releaseYear;
+            : entries[0].releaseYear;
           return { ...c, sqlLocaldbVersion: nextVersion };
         });
       } catch (error) {
