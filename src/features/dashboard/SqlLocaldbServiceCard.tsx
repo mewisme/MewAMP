@@ -49,7 +49,7 @@ export function SqlLocaldbServiceCard({
     ];
   const visibleCommands = commands.filter((c) => {
     if (c.cmd === "start") return status !== "running" && status !== "starting";
-    if (c.cmd === "stop") return status !== "stopped";
+    if (c.cmd === "stop") return status === "running" || status === "starting";
     return true;
   });
   const actionCount = visibleCommands.length;

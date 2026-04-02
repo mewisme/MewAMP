@@ -144,9 +144,17 @@ pub async fn run_sqllocaldb_cli(subcommand: &str, instance: &str) -> Result<(Opt
         ));
     }
     validate_sql_localdb_instance_name(instance)?;
+    let trimmed = instance.trim();
+    let resolved = match list_sql_localdb_instance_names().await {
+        Ok(names) => names
+            .into_iter()
+            .find(|n| n.eq_ignore_ascii_case(trimmed))
+            .unwrap_or_else(|| trimmed.to_string()),
+        Err(_) => trimmed.to_string(),
+    };
     let exe = resolve_sqllocaldb_exe_path();
     let mut cmd = Command::new(&exe);
-    cmd.arg(subcommand).arg(instance);
+    cmd.arg(subcommand).arg(resolved);
     #[cfg(windows)]
     cmd.creation_flags(0x08000000);
     let output = cmd.output().await.map_err(|e| {
@@ -172,7 +180,13 @@ fn parse_sqllocaldb_info_state(text: &str) -> &'static str {
         if !key.trim().eq_ignore_ascii_case("state") {
             continue;
         }
-        let v = rest[1..].trim().to_lowercase();
+        let raw = rest[1..].trim();
+        let first = raw
+            .split_whitespace()
+            .next()
+            .unwrap_or("")
+            .trim_matches(|c| c == '.' || c == ',');
+        let v = first.to_lowercase();
         return match v.as_str() {
             "running" => "running",
             "stopped" => "stopped",
