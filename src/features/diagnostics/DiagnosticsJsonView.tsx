@@ -1,6 +1,5 @@
 import { FileJson } from "lucide-react";
 import { MutedCallout } from "@/components/MutedCallout";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function DiagnosticsJsonView({
@@ -17,11 +16,11 @@ export function DiagnosticsJsonView({
   return (
     <div className="rounded-lg border border-border/60 bg-muted/20 p-px">
       {data ? (
-        <ScrollArea className="max-h-[min(420px,55vh)]">
+        <div className="max-h-[min(420px,55vh)] min-h-0 overflow-auto overscroll-contain rounded-[calc(var(--radius-lg)-1px)]">
           <pre className="p-3 text-xs leading-relaxed whitespace-pre-wrap wrap-break-word">
             {JSON.stringify(data, null, 2)}
           </pre>
-        </ScrollArea>
+        </div>
       ) : (
         <div className="flex min-h-[160px] flex-col items-center justify-center rounded-[calc(var(--radius-lg)-1px)] bg-background/40 px-4 py-8 text-center">
           <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-muted">

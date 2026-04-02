@@ -74,7 +74,7 @@ function App() {
         <Titlebar />
         <BrowserRouter>
           <Layout>
-            <Toaster position="bottom-center" richColors offset={50} />
+            <Toaster position="top-right" richColors offset={50} />
             <Suspense
               fallback={
                 <div className="flex h-full min-h-48 items-center justify-center">
