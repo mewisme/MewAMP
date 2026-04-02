@@ -1,6 +1,6 @@
 [package]
 name = "MewAMP"
-version = "0.3.1"
+version = "0.3.2"
 description = "MewAMP"
 authors = ["mewisme"]
 edition = "2021"

@@ -1,9 +1,12 @@
 ## What's Changed
 
+♻️ Refactoring
+
+- Clean up comments and improve code readability ([9b19a95](../../commit/9b19a95))
+
 🔨 Other Changes
 
-- Remove unused Windows-specific process command extension ([0880144](../../commit/0880144))
-- Bump version to 0.3.0 and update changelog ([b1a8ac4](../../commit/b1a8ac4))
+- Bump version to 0.3.1 and update changelog ([27ca599](../../commit/27ca599))
 
 
-📋 Full Changelog: [b1a8ac4...0880144](../../compare/b1a8ac4...0880144)
+📋 Full Changelog: [27ca599...9b19a95](../../compare/27ca599...9b19a95)
