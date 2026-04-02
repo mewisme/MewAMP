@@ -1,6 +1,4 @@
 use std::{collections::HashMap, env, path::Path, process::Stdio, sync::Mutex};
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
 
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, Command};
