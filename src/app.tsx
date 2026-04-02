@@ -1,5 +1,3 @@
-// import './app.css';
-
 import { invoke } from '@tauri-apps/api/core';
 import { ThemeProvider } from 'next-themes';
 import { lazy, Suspense, useEffect, useState } from 'react';

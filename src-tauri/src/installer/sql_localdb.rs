@@ -433,29 +433,110 @@ fn interpret_msiexec_status(code: Option<i32>) -> Result<(), MewAmpError> {
     }
 }
 
+/// Quote a single token for use inside `cmd.exe /c "<line>"` when needed (paths with spaces, metacharacters).
+#[cfg(windows)]
+fn quote_cmd_token_for_cmd_c(s: &str) -> String {
+    let needs_quote = s.is_empty()
+        || s.chars().any(|c| {
+            c.is_whitespace() || matches!(c, '&' | '|' | '(' | ')' | '<' | '>' | '^' | '%' | '"' | '!')
+        });
+    if needs_quote {
+        format!("\"{}\"", s.replace('\"', "\"\""))
+    } else {
+        s.to_string()
+    }
+}
+
+/// SqlLocalDB MSI installs use **`cmd.exe /c msiexec ...`** so behavior matches a manual elevated Command
+/// Prompt. The app embeds `requireAdministrator` (see `build.rs`); child processes inherit that token.
+#[cfg(windows)]
+async fn run_msiexec(args: &[&str]) -> Result<(), MewAmpError> {
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+    let mut line = String::from("msiexec.exe");
+    for &a in args {
+        line.push(' ');
+        line.push_str(&quote_cmd_token_for_cmd_c(a));
+    }
+    let status = Command::new("cmd.exe")
+        .arg("/c")
+        .arg(line)
+        .creation_flags(CREATE_NO_WINDOW)
+        .status()
+        .await
+        .map_err(|e| {
+            MewAmpError::Installer(format!(
+                "{LOG_SCOPE}: failed to start cmd.exe for msiexec: {e}"
+            ))
+        })?;
+    interpret_msiexec_status(status.code())
+}
+
+#[cfg(not(windows))]
+async fn run_msiexec(args: &[&str]) -> Result<(), MewAmpError> {
+    let status = Command::new("msiexec.exe")
+        .args(args)
+        .status()
+        .await
+        .map_err(|e| MewAmpError::Installer(format!("{LOG_SCOPE}: failed to start msiexec: {e}")))?;
+    interpret_msiexec_status(status.code())
+}
+
+/// `msiexec /L*v` verbose logs are UTF-16 LE (Unicode). Interpreting them as UTF-8 shows a space-like gap
+/// between ASCII letters (every other byte is NUL).
+fn decode_utf16_le_bytes(bytes: &[u8]) -> String {
+    debug_assert!(bytes.len() % 2 == 0);
+    let u16s: Vec<u16> = bytes
+        .chunks_exact(2)
+        .map(|pair| u16::from_le_bytes([pair[0], pair[1]]))
+        .collect();
+    String::from_utf16_lossy(&u16s)
+}
+
+/// Append raw file bytes to `pending`, consume complete UTF-16 code units, leave 0–1 trailing byte in `pending`.
+fn push_msi_log_utf16le(pending: &mut Vec<u8>, chunk: &[u8]) -> String {
+    pending.extend_from_slice(chunk);
+    let trailing = pending.len() % 2;
+    let decode_len = pending.len() - trailing;
+    if decode_len == 0 {
+        return String::new();
+    }
+    let decoded = decode_utf16_le_bytes(&pending[..decode_len]);
+    pending.drain(..decode_len);
+    decoded
+}
+
 async fn tail_msi_log_to_installer_log(log_path: PathBuf, run: Arc<AtomicBool>) {
     let mut offset: u64 = 0;
-    let mut carry: String = String::new();
+    let mut pending_utf16: Vec<u8> = Vec::new();
+    let mut carry_line: String = String::new();
+    let mut strip_leading_bom: bool = true;
 
     while run.load(Ordering::SeqCst) {
         let path = log_path.clone();
-        let carry_in = std::mem::take(&mut carry);
+        let carry_in = std::mem::take(&mut carry_line);
+        let pending_in = std::mem::take(&mut pending_utf16);
         let off = offset;
-        let read_result = tokio::task::spawn_blocking(move || -> Result<(u64, String, Vec<String>), std::io::Error> {
+        let strip_bom = strip_leading_bom;
+        let read_result = tokio::task::spawn_blocking(move || -> Result<(u64, Vec<u8>, String, Vec<String>, bool), std::io::Error> {
             let mut out_lines: Vec<String> = Vec::new();
             let mut offset_local = off;
             let mut carry_local = carry_in;
+            let mut pending_local = pending_in;
+            let mut strip_bom_local = strip_bom;
 
             let Ok(mut file) = std::fs::File::open(&path) else {
-                return Ok((offset_local, carry_local, out_lines));
+                return Ok((offset_local, pending_local, carry_local, out_lines, strip_bom_local));
             };
             let Ok(meta) = file.metadata() else {
-                return Ok((offset_local, carry_local, out_lines));
+                return Ok((offset_local, pending_local, carry_local, out_lines, strip_bom_local));
             };
             let len = meta.len();
             if len < offset_local {
                 offset_local = 0;
                 carry_local.clear();
+                pending_local.clear();
+                strip_bom_local = true;
             }
             if offset_local > len {
                 offset_local = len;
@@ -465,7 +546,13 @@ async fn tail_msi_log_to_installer_log(log_path: PathBuf, run: Arc<AtomicBool>) 
             let mut reader = std::io::BufReader::new(file);
             reader.read_to_end(&mut buf)?;
             offset_local = offset_local.saturating_add(buf.len() as u64);
-            let chunk = String::from_utf8_lossy(&buf);
+            let mut chunk = push_msi_log_utf16le(&mut pending_local, &buf);
+            if strip_bom_local && !chunk.is_empty() {
+                if chunk.starts_with('\u{FEFF}') {
+                    chunk.drain(..'\u{FEFF}'.len_utf8());
+                }
+                strip_bom_local = false;
+            }
             let mut full = carry_local;
             full.push_str(&chunk);
 
@@ -486,13 +573,15 @@ async fn tail_msi_log_to_installer_log(log_path: PathBuf, run: Arc<AtomicBool>) 
             if ends_with_nl {
                 new_carry.clear();
             }
-            Ok((offset_local, new_carry, out_lines))
+            Ok((offset_local, pending_local, new_carry, out_lines, strip_bom_local))
         })
         .await;
 
-        if let Ok(Ok((new_off, new_carry, lines))) = read_result {
+        if let Ok(Ok((new_off, new_pending, new_carry, lines, next_strip_bom))) = read_result {
             offset = new_off;
-            carry = new_carry;
+            pending_utf16 = new_pending;
+            carry_line = new_carry;
+            strip_leading_bom = next_strip_bom;
             for line in lines {
                 let _ = append_log("installer", &format!("[{LOG_SCOPE}] {line}"));
             }
@@ -501,20 +590,25 @@ async fn tail_msi_log_to_installer_log(log_path: PathBuf, run: Arc<AtomicBool>) 
         tokio::time::sleep(std::time::Duration::from_millis(300)).await;
     }
 
-    // Final drain for any trailing bytes after msiexec stops writing.
     let path = log_path.clone();
-    let carry_in = std::mem::take(&mut carry);
+    let carry_in = std::mem::take(&mut carry_line);
+    let pending_in = std::mem::take(&mut pending_utf16);
     let off = offset;
-    match tokio::task::spawn_blocking(move || -> Result<(u64, String, Vec<String>), std::io::Error> {
+    let strip_bom = strip_leading_bom;
+    match tokio::task::spawn_blocking(move || -> Result<(u64, Vec<String>), std::io::Error> {
         let mut out_lines: Vec<String> = Vec::new();
         let mut offset_local = off;
         let mut carry_local = carry_in;
+        let mut pending_local = pending_in;
+        let mut strip_bom_local = strip_bom;
         if let Ok(mut file) = std::fs::File::open(&path) {
             if let Ok(meta) = file.metadata() {
                 let len = meta.len();
                 if len < offset_local {
                     offset_local = 0;
                     carry_local.clear();
+                    pending_local.clear();
+                    strip_bom_local = true;
                 }
                 if offset_local > len {
                     offset_local = len;
@@ -525,18 +619,23 @@ async fn tail_msi_log_to_installer_log(log_path: PathBuf, run: Arc<AtomicBool>) 
             let mut reader = std::io::BufReader::new(file);
             let _ = reader.read_to_end(&mut buf);
             offset_local = offset_local.saturating_add(buf.len() as u64);
-            let chunk = String::from_utf8_lossy(&buf);
+            let mut chunk = push_msi_log_utf16le(&mut pending_local, &buf);
+            if strip_bom_local && !chunk.is_empty() {
+                if chunk.starts_with('\u{FEFF}') {
+                    chunk.drain(..'\u{FEFF}'.len_utf8());
+                }
+            }
             let mut full = carry_local;
             full.push_str(&chunk);
             for line in full.lines().map(str::trim).filter(|l| !l.is_empty()) {
                 out_lines.push(line.to_string());
             }
         }
-        Ok((offset_local, String::new(), out_lines))
+        Ok((offset_local, out_lines))
     })
     .await
     {
-        Ok(Ok((_, _, lines))) => {
+        Ok(Ok((_, lines))) => {
             for line in lines {
                 let _ = append_log("installer", &format!("[{LOG_SCOPE}] {line}"));
             }
@@ -554,15 +653,6 @@ async fn tail_msi_log_to_installer_log(log_path: PathBuf, run: Arc<AtomicBool>) 
             );
         }
     }
-}
-
-async fn run_msiexec(args: &[&str]) -> Result<(), MewAmpError> {
-    let status = Command::new("msiexec.exe")
-        .args(args)
-        .status()
-        .await
-        .map_err(|e| MewAmpError::Installer(format!("{LOG_SCOPE}: failed to start msiexec: {e}")))?;
-    interpret_msiexec_status(status.code())
 }
 
 /// Silent uninstall via ProductCode (preferred) or falls back to repair metadata only for diagnostics.
@@ -729,26 +819,17 @@ pub async fn install_optional_sql_localdb(
     let _ = append_log(
         "installer",
         &format!(
-            "{LOG_SCOPE}: running msiexec /i (silent). MSI log file: {:?}",
+            "{LOG_SCOPE}: running cmd /c msiexec /i (silent). MSI log file: {:?}",
             msi_log
         ),
     );
 
-    let status = Command::new("msiexec.exe")
-        .arg("/i")
-        .arg(msi_path_str)
-        .args(["/quiet", "/norestart", "/L*v", msi_log_str])
-        .status()
-        .await
-        .map_err(|e| {
-            run_tail.store(false, Ordering::SeqCst);
-            MewAmpError::Installer(format!("{LOG_SCOPE}: failed to start msiexec for install: {e}"))
-        })?;
+    let install_result = run_msiexec(&["/i", msi_path_str, "/quiet", "/norestart", "/L*v", msi_log_str]).await;
 
     run_tail.store(false, Ordering::SeqCst);
     let _ = tail_task.await;
 
-    interpret_msiexec_status(status.code())?;
+    install_result?;
 
     sqllocaldb_create_after_msi(&instance_name).await?;
 

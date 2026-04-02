@@ -136,13 +136,11 @@ body {
   --scroll-width: 7px;
   --scroll-rounded: 3px;
 
-  /* background: transparent; */
   background: var(--background);
   overflow: hidden;
   border-radius: var(--rounded-window);
 }
 
-/* Rounded inside border around the window */
 body:after {
   --rounded-window-1: inset 0px 0px 0px 0.5px rgb(255, 255, 255);
   --rounded-window-2: inset 0px 0px 0px 1.5px rgba(255, 255, 255, 0.6);
@@ -180,7 +178,6 @@ body:after {
   @apply [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300;
 }
 
-/* Scrollbar Styles */
 ::-webkit-scrollbar {
   width: var(--scroll-width);
 }

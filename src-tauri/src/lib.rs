@@ -1,4 +1,3 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use std::sync::Mutex;
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
@@ -6,7 +5,6 @@ use tauri::{
     Emitter, Manager,
 };
 
-// Global state to store the opened file path
 struct OpenedFilePath(Mutex<Option<String>>);
 
 #[tauri::command]
@@ -72,12 +70,9 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .manage(process_manager::ServiceManager::new())
         .setup(|app| {
-            // Capture CLI arguments to check if a file was opened
             let args: Vec<String> = std::env::args().collect();
             let opened_file = if args.len() > 1 {
-                // The file path is typically the second argument (first is the executable)
                 let file_path = args[1].clone();
-                // Check if it's a .ts or .tsx file
                 if file_path.ends_with(".ts") || file_path.ends_with(".tsx") {
                     Some(file_path.clone())
                 } else {
@@ -87,10 +82,8 @@ pub fn run() {
                 None
             };
 
-            // Store the opened file path in app state
             app.manage(OpenedFilePath(Mutex::new(opened_file.clone())));
 
-            // Emit event to frontend if a file was opened
             if let Some(file_path) = opened_file {
                 let window = app
                     .get_webview_window("main")
@@ -98,7 +91,6 @@ pub fn run() {
                 let _ = window.emit("file-opened", file_path);
             }
 
-            // Register cleanup handler for when the app is closing
             let window = app
                 .get_webview_window("main")
                 .expect("Failed to get main window");

@@ -49,7 +49,6 @@ pub fn get_all_branches(working_dir: String) -> Result<Vec<String>, String> {
     let branches: Vec<String> = String::from_utf8_lossy(&output.stdout)
         .lines()
         .map(|line| {
-            // Remove the "* " prefix from current branch and trim whitespace
             line.trim_start_matches("* ").trim().to_string()
         })
         .filter(|line| !line.is_empty())
@@ -99,20 +98,16 @@ pub fn get_git_status(working_dir: String) -> Result<std::collections::HashMap<S
         if line.len() < 4 {
             continue;
         }
-        
-        // Git status format: XY filename
-        // X = index status, Y = working tree status
+
         let status_code = &line[0..2];
         let relative_path = line[3..].trim();
-        
-        // Convert relative path to absolute path
+
         let absolute_path = if working_dir.ends_with('/') {
             format!("{}{}", working_dir, relative_path)
         } else {
             format!("{}/{}", working_dir, relative_path)
         };
-        
-        // Determine the status based on the code
+
         let status = match status_code.trim() {
             "M" | " M" | "MM" => "modified",
             "A" | "AM" => "added",
@@ -141,7 +136,6 @@ pub fn git_pull(working_dir: String) -> Result<String, String> {
     let output = cmd.output()
         .map_err(|e| format!("Failed to execute git command: {}", e))?;
 
-    // Combine stdout and stderr for complete output
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     let combined_output = format!("{}{}", stdout, stderr);

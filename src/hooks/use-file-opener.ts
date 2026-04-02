@@ -22,14 +22,12 @@ export function useFileOpener(): UseFileOpenerResult {
 
         const initFileOpener = async () => {
             try {
-                // First, check if a file was opened via CLI
                 const openedFile = await invoke<string | null>('get_opened_file_path');
                 if (openedFile) {
                     console.log('[FileOpener] File opened via CLI:', openedFile);
                     setFilePath(openedFile);
                 }
 
-                // Listen for file-opened events (in case the event fires after component mount)
                 unlisten = await listen<string>('file-opened', (event) => {
                     console.log('[FileOpener] File opened event received:', event.payload);
                     setFilePath(event.payload);
@@ -45,7 +43,6 @@ export function useFileOpener(): UseFileOpenerResult {
 
         initFileOpener();
 
-        // Cleanup listener on unmount
         return () => {
             if (unlisten) {
                 unlisten();

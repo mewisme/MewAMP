@@ -30,7 +30,6 @@ pub fn list_dir(path: &str) -> Result<Vec<FileEntry>, String> {
             .to_string();
         let is_dir = path.is_dir();
 
-        // Skip hidden files/dirs (starting with .)
         if name.starts_with('.') {
             continue;
         }
@@ -43,7 +42,6 @@ pub fn list_dir(path: &str) -> Result<Vec<FileEntry>, String> {
         });
     }
 
-    // Sort: directories first, then files
     entries.sort_by(|a, b| {
         if a.is_dir == b.is_dir {
             a.name.cmp(&b.name)

@@ -9,17 +9,14 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Get the package.json path
 const packageJsonPath = join(process.cwd(), 'package.json');
 const versionLockPath = join(process.cwd(), '.version-lock');
 const tauriConfigPath = join(process.cwd(), 'src-tauri', 'tauri.conf.json');
 const cargoTomlPath = join(process.cwd(), 'src-tauri', 'Cargo.toml');
 
-// Read current version from package.json
 const packageJson = process.env.CURRENT_VERSION ? process.env.CURRENT_VERSION : JSON.parse(readFileSync(packageJsonPath, 'utf8'));
 let [major, minor, patch] = packageJson.version.split('.').map(Number);
 
-// Function to update Tauri config version
 function updateTauriConfig(version) {
   try {
     const tauriConfig = JSON.parse(readFileSync(tauriConfigPath, 'utf8'));
@@ -31,7 +28,7 @@ function updateTauriConfig(version) {
   }
 }
 
-// Update [package].version in Cargo.toml (only the workspace crate version, not dependency specs)
+// Only the workspace crate [package].version — not dependency version fields.
 function updateCargoToml(version) {
   try {
     const content = readFileSync(cargoTomlPath, 'utf8');
@@ -57,7 +54,6 @@ function updateCargoToml(version) {
   }
 }
 
-// Get the last processed commit hash
 function getLastProcessedCommit() {
   try {
     if (existsSync(versionLockPath)) {
@@ -69,25 +65,21 @@ function getLastProcessedCommit() {
   return null;
 }
 
-// Save the current HEAD as the last processed commit
 function saveLastProcessedCommit() {
   const currentCommit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
   writeFileSync(versionLockPath, currentCommit);
 }
 
-// Get commits since last processed commit
 function getNewCommits() {
   const lastProcessedCommit = getLastProcessedCommit();
 
   try {
     if (lastProcessedCommit) {
-      // Get commits since last processed commit, excluding the last processed commit itself
       return execSync(`git log ${lastProcessedCommit}..HEAD --not ${lastProcessedCommit} --pretty=format:"%s"`, { encoding: 'utf8' })
         .split('\n')
         .filter(Boolean)
         .reverse();
     } else {
-      // If no last processed commit, get all commits
       return execSync('git log --pretty=format:"%s"', { encoding: 'utf8' })
         .split('\n')
         .filter(Boolean)
@@ -99,11 +91,9 @@ function getNewCommits() {
   }
 }
 
-// Analyze commits and determine version bump
 function analyzeCommits(commits) {
   let highestBumpType = 'none';
 
-  // Define verb patterns for different types of changes
   const featureVerbs = [
     'add',
     'create',
@@ -130,7 +120,6 @@ function analyzeCommits(commits) {
     'disable'
   ];
 
-  // Track version changes for logging
   let tempMajor = major;
   let tempMinor = minor;
   let tempPatch = patch;
@@ -145,7 +134,6 @@ function analyzeCommits(commits) {
       return;
     }
 
-    // Check for breaking changes - highest priority
     if (lowerCommit.includes('breaking change') || lowerCommit.includes('!:')) {
       commitBumpType = 'major';
       if (highestBumpType !== 'major') {
@@ -155,7 +143,6 @@ function analyzeCommits(commits) {
       }
       highestBumpType = 'major';
     }
-    // Check for features - medium priority
     else if (
       lowerCommit.startsWith('feat:') ||
       lowerCommit.startsWith('feat(') ||
@@ -172,7 +159,6 @@ function analyzeCommits(commits) {
         highestBumpType = 'minor';
       }
     }
-    // Check for patches - lowest priority
     else if (
       lowerCommit.startsWith('fix:') ||
       lowerCommit.startsWith('fix(') ||
@@ -192,7 +178,6 @@ function analyzeCommits(commits) {
       tempPatch++;
       highestBumpType = 'patch';
     }
-    // Default to patch for unmatched commit types
     else {
       commitBumpType = 'patch';
       tempPatch++;
@@ -211,7 +196,6 @@ function analyzeCommits(commits) {
   };
 }
 
-// Update version based on commit analysis
 function updateVersion() {
   const commits = getNewCommits();
 
@@ -225,46 +209,23 @@ function updateVersion() {
 
   const { major: newMajor, minor: newMinor, patch: newPatch } = analyzeCommits(commits);
 
-  // Apply the highest level version bump only once
-  // if (shouldBumpMajor) {
-  //   console.log('\nApplying major version bump...');
-  //   major++;
-  //   minor = 0;
-  //   patch = 0;
-  // } else if (shouldBumpMinor) {
-  //   console.log('\nApplying minor version bump...');
-  //   minor++;
-  //   patch = 0;
-  // } else if (shouldBumpPatch) {
-  //   console.log('\nApplying patch version bump...');
-  //   patch++;
-  // } else {
-  //   console.log('\nNo version bump needed');
-  //   return null;
-  // }
-
   const newVersion = `${newMajor}.${newMinor}.${newPatch}`;
   console.log(`\nFinal version change: ${currentVersion} → ${newVersion}`);
   return newVersion;
 }
 
-// Main execution
 const newVersion = updateVersion();
 
 if (newVersion) {
-  // Update package.json
   packageJson.version = newVersion;
   writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
 
-  // Update Tauri config version
   updateTauriConfig(newVersion);
 
-  // Update Rust crate package version
   updateCargoToml(newVersion);
 
-  // Save the current commit as last processed
   saveLastProcessedCommit();
 
   console.log(`Version upgraded to ${newVersion}`);
   console.log('Last processed commit saved to .version-lock');
-} 
+}

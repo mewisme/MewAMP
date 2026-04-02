@@ -68,16 +68,13 @@ export function getFolderGitStatus(
     folderPath: string,
     gitStatus: Record<string, string>
 ): string | undefined {
-    // Check if the folder itself has a status (e.g., newly added folder)
     if (gitStatus[folderPath]) {
         return gitStatus[folderPath];
     }
 
-    // Check if any children have status
     const folderPathWithSlash = folderPath.endsWith('/') ? folderPath : `${folderPath}/`;
     for (const [path, status] of Object.entries(gitStatus)) {
         if (path.startsWith(folderPathWithSlash)) {
-            // If any child is added/untracked, mark folder as such
             if (status === "added" || status === "untracked") {
                 return "untracked";
             }
@@ -97,18 +94,14 @@ export function getEffectiveGitStatus(
     isDir: boolean,
     gitStatus: Record<string, string>
 ): string | undefined {
-    // For directories, use the folder-specific logic
     if (isDir) {
         return getFolderGitStatus(itemPath, gitStatus);
     }
 
-    // For files, first check direct status
     if (gitStatus[itemPath]) {
         return gitStatus[itemPath];
     }
 
-    // If no direct status, check if any parent folder is untracked/added
-    // This handles children of newly added folders
     let currentPath = itemPath;
     while (currentPath.includes('/')) {
         const lastSlash = currentPath.lastIndexOf('/');

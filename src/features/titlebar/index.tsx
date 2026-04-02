@@ -15,16 +15,13 @@ export function Titlebar() {
     getPlatform();
   }, []);
 
-  // Return null while detecting platform to avoid flash
   if (!currentPlatform) {
     return null;
   }
 
-  // Render platform-specific titlebar
   if (currentPlatform === 'macos') {
     return <MacOSTitlebar />;
   }
 
-  // Default to Windows titlebar for Windows and Linux
   return <WindowsTitlebar />;
 }

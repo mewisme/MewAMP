@@ -56,7 +56,6 @@ class ErrorBoundaryClass extends React.Component<Props, State> {
   }
 }
 
-// Function component wrapper
 export const ErrorBoundary = ({ children, fallback }: Props) => {
   return (
     <ErrorBoundaryClass fallback={fallback}>

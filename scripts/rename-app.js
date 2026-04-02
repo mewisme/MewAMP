@@ -10,7 +10,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 
-// Get the new app name from command line arguments
 const newAppName = process.argv[2];
 
 if (!newAppName) {
@@ -19,7 +18,6 @@ if (!newAppName) {
   process.exit(1);
 }
 
-// Generate kebab-case identifier from app name
 const identifier = newAppName
   .toLowerCase()
   .replace(/[^a-z0-9]+/g, '-')
@@ -28,20 +26,17 @@ const identifier = newAppName
 console.log(`Renaming app to: ${newAppName}`);
 console.log(`Identifier will be: ${identifier}`);
 
-// File paths
 const packageJsonPath = path.join(__dirname, '../package.json');
 const cargoTomlPath = path.join(__dirname, '../src-tauri/Cargo.toml');
 const tauriConfPath = path.join(__dirname, '../src-tauri/tauri.conf.json');
 
 try {
-  // Update package.json
   console.log('\nUpdating package.json...');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   packageJson.name = newAppName;
   fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
   console.log('✓ package.json updated');
 
-  // Update Cargo.toml
   console.log('\nUpdating Cargo.toml...');
   let cargoToml = fs.readFileSync(cargoTomlPath, 'utf8');
   cargoToml = cargoToml.replace(
@@ -55,13 +50,11 @@ try {
   fs.writeFileSync(cargoTomlPath, cargoToml);
   console.log('✓ Cargo.toml updated');
 
-  // Update tauri.conf.json
   console.log('\nUpdating tauri.conf.json...');
   const tauriConf = JSON.parse(fs.readFileSync(tauriConfPath, 'utf8'));
   tauriConf.productName = newAppName;
   tauriConf.identifier = `com.${identifier}.app`;
 
-  // Update window title if it exists
   if (tauriConf.app && tauriConf.app.windows && tauriConf.app.windows[0]) {
     tauriConf.app.windows[0].title = newAppName;
   }
