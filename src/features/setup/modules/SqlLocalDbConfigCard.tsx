@@ -78,9 +78,7 @@ export function SqlLocalDbConfigCard({
               <SelectContent className="rounded-xl">
                 {entries.map((e) => (
                   <SelectItem key={e.manifestKey} value={e.releaseYear} className="rounded-lg">
-                    <span className="font-medium">{e.releaseYear}</span>
-                    {e.version ? <span className="text-muted-foreground"> · {e.version}</span> : null}
-                    {e.installNotes ? <span className="text-muted-foreground"> — {e.installNotes}</span> : null}
+                    {e.releaseYear}
                   </SelectItem>
                 ))}
               </SelectContent>

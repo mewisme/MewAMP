@@ -74,9 +74,9 @@ export type SqlLocalDbOnlyInstallConfig = {
 
 export const installSqlLocaldbOnly = (config: SqlLocalDbOnlyInstallConfig) =>
   invoke<void>("install_sql_localdb_only", {
-    sqllocaldb_version: config.sqlLocaldbVersion,
-    sql_localdb_instance_name: config.sqlLocaldbInstanceName,
-    force_reinstall: config.forceReinstall,
+    sqllocaldbVersion: config.sqlLocaldbVersion,
+    sqlLocaldbInstanceName: config.sqlLocaldbInstanceName,
+    forceReinstall: config.forceReinstall,
   });
 
 export const getSqlLocalDbManifestEntries = () =>
