@@ -2,8 +2,8 @@
 
 🔨 Other Changes
 
-- Integrate SqlLocalDB management and runtime support ([771b31b](../../commit/771b31b))
-- Bump version to 0.2.0 and update changelog ([02f72d3](../../commit/02f72d3))
+- Remove unused Windows-specific process command extension ([0880144](../../commit/0880144))
+- Bump version to 0.3.0 and update changelog ([b1a8ac4](../../commit/b1a8ac4))
 
 
-📋 Full Changelog: [02f72d3...771b31b](../../compare/02f72d3...771b31b)
+📋 Full Changelog: [b1a8ac4...0880144](../../compare/b1a8ac4...0880144)
