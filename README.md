@@ -1,34 +1,41 @@
 # MewAMP
 
-MewAMP is a desktop application built with Tauri + React for managing local development services with a modern dashboard, guided setup flow, diagnostics, and log tooling.
+A modern, open-source local web development stack manager. Install, configure, and control Apache, PHP, MariaDB, and optional modules like SqlLocalDB — all from a single desktop app.
+
+Built with **Tauri v2** and **React 19**.
+
+## Why MewAMP?
+
+Traditional AMP stacks ship as CLI-heavy bundles with manual config editing. MewAMP wraps the same power in a polished desktop UI with a guided setup wizard, real-time service controls, live log streaming, and built-in diagnostics — so you spend less time wrangling configs and more time building.
 
 ## Features
 
-- Cross-platform desktop runtime with Tauri v2
-- Dashboard and setup pages for installer and service workflows
-- Service control and status monitoring via Rust commands
-- Port checks and diagnostics export
-- Log viewing and cleanup utilities
-- Settings management for ports and local paths
-- Built-in file system and Git helper commands
+- **Dashboard** — Start, stop, and restart Apache and MariaDB with one click. Quick-action buttons open localhost, phpMyAdmin, htdocs, runtime/config folders, and logs.
+- **Setup Wizard** — Two-track guided install: *Core* (paths, ports, components, manifest) and *Modules* (SqlLocalDB and future add-ons). Configurable ports and directories, optional phpMyAdmin, force-reinstall toggle.
+- **SqlLocalDB** *(Windows)* — Install, create/delete instances, start/stop, and inspect Microsoft SQL Express LocalDB directly from the dashboard and settings.
+- **Live Logs** — Tabbed log viewer for the app, installer, Apache, MariaDB, and SqlLocalDB with 1-second auto-refresh, copy, and clear.
+- **Settings** — Manifest summary, path overview, theme selector (light / dark / system), port validation, and full SqlLocalDB instance management.
+- **Diagnostics** — Collect runtime state as JSON, copy to clipboard, or export a support bundle.
+- **Auto-Updater** — Checks for new releases hourly and installs updates in-app with a progress bar.
+- **Custom Titlebar** — Native-feeling window controls on both Windows and macOS.
+- **Splash Screen** — Branded loading screen while the app initialises.
 
 ## Tech Stack
 
-- Frontend: React 19, TypeScript, Vite 6
-- UI: Tailwind CSS v4, shadcn/ui, Lucide icons
-- State: Jotai
-- Routing: React Router v7
-- Desktop runtime: Tauri v2
-- Backend language: Rust
+| Layer | Technology |
+|-------|-----------|
+| Desktop runtime | Tauri v2 (Rust) |
+| Frontend | React 19, TypeScript, Vite 6 |
+| UI | Tailwind CSS v4, shadcn/ui, Lucide icons |
+| State | Jotai |
+| Routing | React Router v7 |
 
 ## Prerequisites
 
-Install these tools before running the app:
-
-- [Node.js](https://nodejs.org/) (LTS recommended)
+- [Node.js](https://nodejs.org/) (LTS)
 - [pnpm](https://pnpm.io/)
 - [Rust](https://www.rust-lang.org/)
-- System requirements for Tauri (see [Tauri prerequisites](https://tauri.app/start/prerequisites/))
+- Tauri v2 system dependencies — see [Tauri prerequisites](https://tauri.app/start/prerequisites/)
 
 ## Quick Start
 
@@ -41,118 +48,61 @@ pnpm app-dev
 
 ## Scripts
 
-- `pnpm dev` - Run Vite dev server (web only)
-- `pnpm build` - Type-check and build frontend (`tsc && vite build`)
-- `pnpm preview` - Preview the production web build
-- `pnpm app-dev` - Run the Tauri desktop app in development
-- `pnpm app-build` - Build production desktop binaries
-- `pnpm tauri` - Run raw Tauri CLI commands
-- `pnpm icon` - Generate app icons from `app-icon.png`
-- `pnpm app-upver` - Generate changelog and bump app version
-- `pnpm app-sign` - Generate updater signing key pair
-- `pnpm rename` - Rename app metadata across key config files
-
-## Rename App
-
-```bash
-pnpm rename "MewAMP"
-```
-
-The rename script updates:
-
-- `package.json` (`name`)
-- `src-tauri/Cargo.toml` (`name`, `description`)
-- `src-tauri/tauri.conf.json` (`productName`, `identifier`, window title)
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Vite dev server (web only) |
+| `pnpm build` | Type-check and build frontend |
+| `pnpm preview` | Preview production web build |
+| `pnpm app-dev` | Run the Tauri desktop app in development |
+| `pnpm app-build` | Build production desktop binaries |
+| `pnpm tauri` | Run raw Tauri CLI commands |
+| `pnpm icon` | Generate app icons from `app-icon.png` |
+| `pnpm app-upver` | Bump version and generate changelog |
+| `pnpm app-sign` | Generate updater signing key pair |
+| `pnpm rename` | Rename app across config files |
 
 ## Project Structure
 
 ```text
 MewAMP/
-├── src/                          # React frontend
-│   ├── components/               # Shared UI components
-│   ├── features/                 # Feature modules (dashboard, setup, logs, etc.)
-│   ├── pages/                    # Route pages
-│   ├── stores/                   # Jotai stores
-│   ├── hooks/                    # Custom hooks
-│   └── lib/                      # Frontend utilities and command wrappers
-├── src-tauri/                    # Rust + Tauri backend
-│   ├── src/commands/             # Tauri command modules
-│   ├── src/installer/            # Installer flow internals
-│   ├── src/process_manager/      # Managed process state/control
-│   ├── src/diagnostics/          # Diagnostics collection/export logic
-│   ├── src/logs/                 # Log operations
-│   ├── src/manifest/             # Manifest and metadata handling
+├── src/                              # React frontend
+│   ├── components/                   # Shared UI (shadcn/ui, layout, sidebar)
+│   ├── features/
+│   │   ├── dashboard/                # Service cards, quick actions
+│   │   ├── setup/                    # Core & modules setup wizards
+│   │   ├── logs/                     # Tabbed live log viewer
+│   │   ├── settings/                 # Appearance, ports, paths, SqlLocalDB
+│   │   ├── diagnostics/              # Runtime diagnostics panel
+│   │   ├── sql-localdb/              # SqlLocalDB hooks & global sync
+│   │   ├── titlebar/                 # Custom window titlebar (Win/Mac)
+│   │   └── updater/                  # In-app version check & update
+│   ├── pages/                        # Route pages
+│   ├── stores/                       # Jotai atoms (services, setup, app state)
+│   ├── hooks/                        # Custom React hooks
+│   └── lib/                          # Utilities and Tauri command wrappers
+├── src-tauri/                        # Rust backend
+│   ├── src/
+│   │   ├── commands/                 # Tauri command modules
+│   │   ├── installer/                # Installer flow internals
+│   │   ├── process_manager/          # Managed process state & control
+│   │   ├── diagnostics/              # Diagnostics collection & export
+│   │   ├── logs/                     # Log file operations
+│   │   └── manifest/                 # Manifest & metadata handling
+│   ├── resources/manifest.json       # Bundled runtime manifest
 │   ├── Cargo.toml
 │   └── tauri.conf.json
-├── public/                       # Static assets
-├── scripts/                      # Project maintenance scripts
+├── scripts/                          # Version bump, changelog, rename
 └── package.json
 ```
-
-## Tauri Commands (Current)
-
-### Utility
-
-- `greet`
-- `get_opened_file_path`
-- `toggle_devtools`
-- `open_devtools`
-- `close_devtools`
-- `splash_close`
-
-### File System
-
-- `list_dir`
-- `read_file_content`
-- `write_file_content`
-- `create_directory`
-- `create_file`
-- `delete_node`
-- `rename_node`
-
-### Git
-
-- `get_current_branch`
-- `get_all_branches`
-- `switch_branch`
-- `get_git_status`
-- `git_pull`
-
-### Setup / Installer
-
-- `start_install`
-- `get_install_state`
-- `reset_install_state`
-
-### Services / Runtime
-
-- `start_service`
-- `start_managed_service`
-- `stop_service`
-- `get_service_status`
-- `check_ports`
-
-### Diagnostics / Logs / Settings
-
-- `get_diagnostics`
-- `export_diagnostics`
-- `get_log`
-- `clear_log_file`
-- `get_app_settings`
-- `get_htdocs_path`
-- `open_folder`
-- `update_ports`
-- `update_paths`
 
 ## Build for Production
 
 ```bash
-pnpm build
 pnpm app-build
 ```
 
-Desktop build artifacts are generated under `src-tauri/target/release`.
+Desktop installers and binaries are generated under `src-tauri/target/release/bundle`.
 
 ## License
 
-MIT License. See [LICENSE](LICENSE).
+[MIT](LICENSE)
